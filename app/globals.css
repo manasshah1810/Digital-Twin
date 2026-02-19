@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 4.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 72.2% 50.6%;
+    --primary-foreground: 0 85.7% 97.3%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 0 72.2% 50.6%;
+    --radius: 0.75rem;
+  }
+}
+
+body {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  background-image:
+    radial-gradient(circle at 0% 0%, hsla(0, 72%, 51%, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, hsla(220, 72%, 51%, 0.1) 0%, transparent 50%);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl transition-all duration-300;
+  }
+
+  .glass-card:hover {
+    @apply bg-white/[0.05] border-white/20 shadow-2xl shadow-red-500/10 -translate-y-1;
+  }
+
+  .premium-gradient {
+    @apply bg-gradient-to-br from-white via-white to-white/40 bg-clip-text text-transparent;
+  }
+
+  .red-gradient {
+    @apply bg-gradient-to-r from-red-600 to-orange-500;
+  }
+
+  .glow-red {
+    text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+  }
+
+  .grid-pattern {
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}

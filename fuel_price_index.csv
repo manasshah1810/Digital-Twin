@@ -1,0 +1,5 @@
+fuel_index_id,fuel_type,region,base_price_index,volatility_factor,current_multiplier
+FUEL_001,Diesel,APAC,1.0,0.25,1.0
+FUEL_002,Diesel,EU,1.0,0.3,1.0
+FUEL_003,Diesel,NA,1.0,0.2,1.0
+FUEL_004,BunkerFuel,Global,1.0,0.18,1.0
