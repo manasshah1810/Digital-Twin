@@ -7,7 +7,7 @@ import ThemeProvider, { ThemeToggle } from './components/ThemeProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-    title: 'Logistics Digital Twin | Enterprise Network Optimization',
+    title: 'Cogniify Digital-Twin | Enterprise Network Optimization',
     description: 'Advanced deterministic simulation for resilient logistics and supply chain optimization.',
 };
 
@@ -24,10 +24,8 @@ export default function RootLayout({
                         <header className="sticky top-0 z-50 border-b border-surface-200 bg-white/80 backdrop-blur-xl">
                             <div className="container mx-auto flex h-16 items-center justify-between px-6">
                                 <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-                                        <div className="h-2.5 w-2.5 rounded-full bg-white" />
-                                    </div>
-                                    <span className="font-black tracking-tighter text-xl uppercase text-surface-900">Digital.<span className="text-brand-500">Twin</span></span>
+                                    <img src="/logo.png" alt="Cogniify Logo" className="h-8 w-auto object-contain drop-shadow-md" />
+                                    <span className="font-black tracking-tighter text-xl uppercase text-surface-900">Cogniify <span className="text-brand-500">Digital-Twin</span></span>
                                 </div>
 
                                 <nav className="hidden md:flex items-center gap-8 text-[11px] font-bold uppercase tracking-widest text-surface-400">
