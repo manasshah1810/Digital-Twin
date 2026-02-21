@@ -7,6 +7,7 @@ export interface SimulationScenarioConfig {
     edgeCapacityThrottles: Record<string, number> // edge id -> percentage (0.0 to 1.0)
     forbiddenModes?: string[]
     softModeConstraints?: boolean // If true, forbidden modes are penalized (1000x cost) instead of removed
+    congestedNodes?: Record<string, number> // node id -> capacity multiplier (e.g., 0.4 = 40% capacity)
 }
 
 /**
@@ -18,6 +19,7 @@ export function applyConstraints(
     config: SimulationScenarioConfig
 ): LogisticsGraph {
     const closedNodes = new Set(config.closedNodeIds)
+    const congestedNodes = config.congestedNodes || {}
     // Normalize mode synonyms to canonical form
     const normMode = (m: string) => {
         const l = m.toLowerCase()
@@ -84,10 +86,22 @@ export function applyConstraints(
                 costBreakdown: physics.breakdown
             }
 
-            // Apply Capacity Throttling
+            // Apply Capacity Throttling (edge-level)
             const throttle = config.edgeCapacityThrottles[newEdge.id] ?? 1.0
             if (newEdge.capacity !== undefined) {
                 newEdge.capacity = newEdge.capacity * throttle
+            }
+
+            // Apply Congestion: reduce capacity for edges touching congested nodes
+            const sourceCongestion = congestedNodes[sourceId]
+            const targetCongestion = congestedNodes[edge.target]
+            if (sourceCongestion !== undefined || targetCongestion !== undefined) {
+                const congestionMult = Math.min(sourceCongestion ?? 1.0, targetCongestion ?? 1.0)
+                if (newEdge.capacity !== undefined) {
+                    newEdge.capacity = newEdge.capacity * congestionMult
+                }
+                // Congestion also increases cost (delay penalty)
+                newEdge.costPerUnit = newEdge.costPerUnit * (1 + (1 - congestionMult))
             }
 
             modifiedEdges.push(newEdge)

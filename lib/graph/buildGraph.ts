@@ -48,6 +48,44 @@ export async function buildGraph(datasetId: string, scenarioId?: string): Promis
     console.log(`[Bio-Grid] Building graph from Dataset ${datasetId}`)
     console.log(`[Bio-Grid] Loaded ${nodesData.length} nodes and ${edgesData.length} edges`)
 
+    // 1b. Fetch Carrier Pricing (Spec 8.3)
+    const { data: carrierData } = await supabase
+        .from('carrier_pricing')
+        .select('*')
+        .eq('dataset_id', datasetId)
+
+    // 1c. Fetch Fuel Indices (Spec 8.4)
+    const { data: fuelData } = await supabase
+        .from('fuel_indices')
+        .select('*')
+        .eq('dataset_id', datasetId)
+
+    // Build carrier rate lookup: mode -> best carrier rate
+    const carrierRates: Record<string, { costPerKm: number; fuelLinked: boolean; carrierId: string }> = {}
+    if (carrierData && carrierData.length > 0) {
+        for (const c of carrierData) {
+            const mode = (c.mode || '').toLowerCase()
+            const existing = carrierRates[mode]
+            const rate = Number(c.cost_per_km) || 0
+            if (!existing || rate < existing.costPerKm) {
+                carrierRates[mode] = {
+                    costPerKm: rate,
+                    fuelLinked: c.fuel_index_linked === true || c.fuel_index_linked === 'Yes',
+                    carrierId: c.carrier_id || c.id
+                }
+            }
+        }
+        console.log(`[Bio-Grid] Loaded ${carrierData.length} carrier rates for ${Object.keys(carrierRates).length} modes`)
+    }
+
+    // Build fuel index lookup: fuel_type -> price_index
+    const fuelIndices: Record<string, number> = {}
+    if (fuelData && fuelData.length > 0) {
+        for (const f of fuelData) {
+            fuelIndices[(f.fuel_type || '').toLowerCase()] = Number(f.price_index) || 1.0
+        }
+    }
+
     const nodes = new Map<string, GraphNode>()
     const adjacencyList = new Map<string, GraphEdge[]>()
 
@@ -70,8 +108,22 @@ export async function buildGraph(datasetId: string, scenarioId?: string): Promis
         if (!nodes.has(edge.target_node_id)) continue
 
         const dist = Number(edge.distance) || 0
-        const cost = Number(edge.cost_per_unit || edge.base_cost_usd) || 0
+        let cost = Number(edge.cost_per_unit || edge.base_cost_usd) || 0
         const mode = (edge.mode || 'truck').toLowerCase()
+
+        // Apply Carrier Rate if available (Spec 8.3)
+        const carrier = carrierRates[mode]
+        if (carrier && carrier.costPerKm > 0) {
+            let carrierCost = carrier.costPerKm * dist
+            // If carrier is fuel-index-linked, adjust cost by fuel index
+            if (carrier.fuelLinked) {
+                const fuelType = mode.includes('sea') ? 'bunker' : mode.includes('air') ? 'jet fuel' : 'diesel'
+                const fuelIdx = fuelIndices[fuelType] || fuelIndices['diesel'] || 1.0
+                carrierCost *= fuelIdx
+            }
+            // Use carrier cost if no explicit edge cost, or blend with edge cost
+            cost = cost > 0 ? Math.min(cost, carrierCost) : carrierCost
+        }
 
         // Generalized speed heuristic for 54+ types
         let speed = 50
@@ -89,7 +141,11 @@ export async function buildGraph(datasetId: string, scenarioId?: string): Promis
             costPerUnit: cost,
             transitTime: dist / speed,
             capacity: edge.capacity ? Number(edge.capacity) : undefined,
-            metadata: edge.metadata || {}
+            metadata: {
+                ...(edge.metadata || {}),
+                carrierId: carrier?.carrierId,
+                fuelLinked: carrier?.fuelLinked
+            }
         }
 
         const currentEdges = adjacencyList.get(edge.source_node_id) || []

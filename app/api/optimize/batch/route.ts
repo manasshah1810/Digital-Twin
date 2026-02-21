@@ -46,7 +46,8 @@ export async function POST(request: Request) {
             fuelPriceMultipliers: constraints?.fuelPriceMultipliers || fuelMultipliers,
             closedNodeIds: constraints?.closedNodeIds || [],
             forbiddenModes: constraints?.forbiddenModes || [],
-            edgeCapacityThrottles: constraints?.edgeCapacityThrottles || {}
+            edgeCapacityThrottles: constraints?.edgeCapacityThrottles || {},
+            congestedNodes: constraints?.congestedNodes || {}
         }
 
         const constrainedGraph = applyConstraints(baseGraph, config)

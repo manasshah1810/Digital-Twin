@@ -188,6 +188,23 @@ export default function LogisticsMap({
                     </Source>
                 )}
 
+                {/* Scenario Primary Route - Glow/Halo */}
+                {scenarioGeoJSON && (
+                    <Source id="scenario-glow-source" type="geojson" data={scenarioGeoJSON}>
+                        <Layer
+                            id="scenario-glow-layer"
+                            type="line"
+                            layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+                            paint={{
+                                'line-color': '#3b82f6',
+                                'line-width': 14,
+                                'line-opacity': 0.15,
+                                'line-blur': 8
+                            }}
+                        />
+                    </Source>
+                )}
+
                 {/* Scenario Primary Route */}
                 {scenarioGeoJSON && (
                     <Source id="scenario-route-source" type="geojson" data={scenarioGeoJSON}>
@@ -197,8 +214,25 @@ export default function LogisticsMap({
                             layout={{ 'line-join': 'round', 'line-cap': 'round' }}
                             paint={{
                                 'line-color': '#1d4ed8',
-                                'line-width': 6,
+                                'line-width': 5,
                                 'line-opacity': 1.0
+                            }}
+                        />
+                    </Source>
+                )}
+
+                {/* Animated dash overlay (ant trail effect) */}
+                {scenarioGeoJSON && (
+                    <Source id="scenario-dash-source" type="geojson" data={scenarioGeoJSON}>
+                        <Layer
+                            id="scenario-dash-layer"
+                            type="line"
+                            layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+                            paint={{
+                                'line-color': '#93c5fd',
+                                'line-width': 3,
+                                'line-dasharray': [2, 4],
+                                'line-opacity': 0.9
                             }}
                         />
                     </Source>

@@ -38,6 +38,7 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
     const [editorMode, setEditorMode] = useState<'expert' | 'autonomous'>('autonomous')
     const [weightMode, setWeightMode] = useState<'balanced' | 'co2' | 'time'>('balanced')
     const [isAIDataset, setIsAIDataset] = useState(false)
+    const [congestedNodes, setCongestedNodes] = useState<Record<string, number>>({})
 
     const router = useRouter()
 
@@ -52,7 +53,7 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
         }, 150);
 
         return () => clearTimeout(timer);
-    }, [closedNodeIds, forbiddenModes, fuelMultiplier, sourceNodeId, targetNodeId, selectedTargets, mode, parcelCount, parcelWeight]);
+    }, [closedNodeIds, forbiddenModes, fuelMultiplier, sourceNodeId, targetNodeId, selectedTargets, mode, parcelCount, parcelWeight, congestedNodes]);
 
     // Persist Tactical Constraints to Database
     useEffect(() => {
@@ -156,14 +157,14 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
             const body = mode === 'single'
                 ? {
                     scenarioId, sourceNodeId, targetNodeId,
-                    constraints: { fuelPriceMultipliers: { 'truck': fuelMultiplier, 'rail': fuelMultiplier, 'sea': fuelMultiplier, 'air': fuelMultiplier }, closedNodeIds, forbiddenModes },
+                    constraints: { fuelPriceMultipliers: { 'truck': fuelMultiplier, 'rail': fuelMultiplier, 'sea': fuelMultiplier, 'air': fuelMultiplier }, closedNodeIds, forbiddenModes, congestedNodes },
                     targetRank, weightMode, skipAI: editorMode === 'autonomous',
                     cargo: { packageCount: parcelCount, packageWeight: parcelWeight }
                 }
                 : {
                     scenarioId,
                     routePairs: selectedTargets.map(tid => ({ sourceNodeId, targetNodeId: tid })),
-                    constraints: { fuelPriceMultipliers: { 'truck': fuelMultiplier, 'rail': fuelMultiplier, 'sea': fuelMultiplier, 'air': fuelMultiplier }, closedNodeIds, forbiddenModes },
+                    constraints: { fuelPriceMultipliers: { 'truck': fuelMultiplier, 'rail': fuelMultiplier, 'sea': fuelMultiplier, 'air': fuelMultiplier }, closedNodeIds, forbiddenModes, congestedNodes },
                     weightMode,
                     cargo: { packageCount: parcelCount, packageWeight: parcelWeight }
                 }
@@ -425,10 +426,56 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
                                 <div className="flex flex-wrap gap-2 min-h-[40px]">
                                     {closedNodeIds.map(id => (
                                         <button key={id} onClick={() => setClosedNodeIds(closedNodeIds.filter(cid => cid !== id))} className="px-3 py-1 bg-red-50 border border-red-100 rounded-lg text-[9px] font-black text-red-600 hover:bg-red-100 flex items-center gap-1.5 transition-all">
-                                            <AlertCircle className="w-2.5 h-2.5" /> {nodes.find(n => n.id === id)?.name || 'Node'}
+                                            <AlertCircle className="w-2.5 h-2.5" /> {nodes.find(n => n.id === id)?.name || 'Node'} — Closed
                                         </button>
                                     ))}
-                                    {closedNodeIds.length === 0 && <span className="text-[9px] text-slate-300 font-bold uppercase tracking-widest italic py-1">No exclusions active</span>}
+                                    {Object.entries(congestedNodes).map(([id, mult]) => (
+                                        <button key={`cong-${id}`} onClick={() => {
+                                            const next = { ...congestedNodes }
+                                            delete next[id]
+                                            setCongestedNodes(next)
+                                        }} className="px-3 py-1 bg-amber-50 border border-amber-100 rounded-lg text-[9px] font-black text-amber-600 hover:bg-amber-100 flex items-center gap-1.5 transition-all">
+                                            <AlertCircle className="w-2.5 h-2.5" /> {nodes.find(n => n.id === id)?.name || 'Node'} — {Math.round(mult * 100)}% capacity
+                                        </button>
+                                    ))}
+                                    {closedNodeIds.length === 0 && Object.keys(congestedNodes).length === 0 && <span className="text-[9px] text-slate-300 font-bold uppercase tracking-widest italic py-1">No disruptions active</span>}
+                                </div>
+
+                                {/* Preset Disruption Scenarios */}
+                                <div className="pt-4 border-t border-slate-100 space-y-2">
+                                    <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest px-1">Quick Disruptions</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setForbiddenModes(prev => prev.includes('rail') ? prev : [...prev, 'rail'])
+                                            }}
+                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${forbiddenModes.includes('rail') ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-500 hover:border-red-200 hover:text-red-500'}`}
+                                        >
+                                            <ShieldAlert className="w-3.5 h-3.5" />
+                                            Rail Strike
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const portNodes = nodes.filter(n => n.type?.toLowerCase().includes('port'))
+                                                if (portNodes.length > 0) {
+                                                    const congested = { ...congestedNodes }
+                                                    portNodes.forEach(p => { congested[p.id] = 0.4 })
+                                                    setCongestedNodes(congested)
+                                                }
+                                            }}
+                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${Object.keys(congestedNodes).length > 0 ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-200 hover:text-amber-500'}`}
+                                        >
+                                            <AlertCircle className="w-3.5 h-3.5" />
+                                            Port Congestion
+                                        </button>
+                                        <button
+                                            onClick={() => setFuelMultiplier(2.5)}
+                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${fuelMultiplier >= 2.5 ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-white border-slate-200 text-slate-500 hover:border-orange-200 hover:text-orange-500'}`}
+                                        >
+                                            <Activity className="w-3.5 h-3.5" />
+                                            Fuel Crisis
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 

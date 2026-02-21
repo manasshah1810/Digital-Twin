@@ -195,6 +195,36 @@ export default function ResultsPanel({ result, closedNodeIds = [], onToggleNode,
                 </div>
             </div>
 
+            {/* Mode Shift Metric */}
+            {result.pathDetails && result.pathDetails.length > 0 && (() => {
+                const scenarioModes = result.pathDetails.map((p: any) => (p.mode || 'truck').toLowerCase()).filter(Boolean)
+                const baselineModes = result.baselinePathDetails?.map((p: any) => (p.mode || 'truck').toLowerCase()).filter(Boolean) || scenarioModes
+                let shifted = 0
+                const totalLegs = Math.max(scenarioModes.length, baselineModes.length, 1)
+                for (let i = 0; i < totalLegs; i++) { if (scenarioModes[i] !== baselineModes[i]) shifted++ }
+                const shiftPct = Math.round((shifted / totalLegs) * 100)
+                const modeCounts: Record<string, number> = {}
+                scenarioModes.forEach((m: string) => { modeCounts[m] = (modeCounts[m] || 0) + 1 })
+                return (
+                    <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <div className="h-7 w-7 bg-violet-50 rounded-lg flex items-center justify-center">
+                                    <Layers className="w-3.5 h-3.5 text-violet-600" />
+                                </div>
+                                <div className="text-[8px] font-black text-slate-400 uppercase">Mode Shift</div>
+                            </div>
+                            <div className={`text-sm font-black ${shiftPct > 0 ? 'text-violet-600' : 'text-slate-400'}`}>{shiftPct}%</div>
+                        </div>
+                        <div className="flex gap-1 flex-wrap">
+                            {Object.entries(modeCounts).map(([mode, count]) => (
+                                <span key={mode} className="bg-slate-100 text-slate-600 text-[7px] font-black uppercase px-2 py-0.5 rounded">{mode} x{count}</span>
+                            ))}
+                        </div>
+                    </div>
+                )
+            })()}
+
             {result.alternatives?.length > 0 && (() => {
                 const candidates = [result, ...result.alternatives].slice(0, 3).map((c) => ({
                     ...c,

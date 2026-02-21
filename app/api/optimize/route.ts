@@ -72,7 +72,8 @@ export async function POST(request: Request) {
             fuelPriceMultipliers: constraints?.fuelPriceMultipliers || fuelMultipliers,
             closedNodeIds: constraints?.closedNodeIds || [],
             forbiddenModes: constraints?.forbiddenModes || [],
-            edgeCapacityThrottles: constraints?.edgeCapacityThrottles || {}
+            edgeCapacityThrottles: constraints?.edgeCapacityThrottles || {},
+            congestedNodes: constraints?.congestedNodes || {}
         }
 
         // 4. Transform AI Strategies into Calculated Results

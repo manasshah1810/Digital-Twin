@@ -31,7 +31,6 @@ export default function RootLayout({
                             <nav className="hidden md:flex items-center gap-8 text-[11px] font-bold uppercase tracking-widest text-slate-400">
                                 <a href="/dashboard" className="transition-all hover:text-blue-600">Operations</a>
                                 <a href="/dashboard/datasets" className="transition-all hover:text-blue-600">Assets</a>
-                                <a href="/dashboard/reports" className="transition-all hover:text-blue-600">Analytics</a>
                                 <a href="/ai-advisor" className="transition-all hover:text-amber-600 text-amber-500">AI Advisor</a>
                             </nav>
 
