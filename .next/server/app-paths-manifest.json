@@ -1,7 +1,6 @@
 {
-  "/dashboard/page": "app/dashboard/page.js",
   "/page": "app/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/ai-advisor/page": "app/ai-advisor/page.js",
-  "/dashboard/datasets/page": "app/dashboard/datasets/page.js",
-  "/api/optimize/route": "app/api/optimize/route.js"
+  "/dashboard/datasets/page": "app/dashboard/datasets/page.js"
 }
