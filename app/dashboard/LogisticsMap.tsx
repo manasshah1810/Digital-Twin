@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useMemo, useState, useEffect } from 'react'
-import { Map as MapLibreMap, Source, Layer, Marker, NavigationControl } from 'react-map-gl/maplibre'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
+import { Map as MapLibreMap, Source, Layer, Marker, NavigationControl, MapRef } from 'react-map-gl/maplibre'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapPin, Info, Activity, Ship, Truck, Train, Plane, Maximize2, CheckCircle } from 'lucide-react'
@@ -50,6 +50,7 @@ export default function LogisticsMap({
         zoom: 3.5
     })
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+    const mapRef = useRef<MapRef>(null)
 
     const scenarioGeoJSON = useMemo(() => {
         if (!scenarioPath || scenarioPath.length < 2) return null
@@ -152,6 +153,71 @@ export default function LogisticsMap({
         }
     }, [scenarioPath, allNodes])
 
+    useEffect(() => {
+        if (!scenarioGeoJSON || !mapRef.current) return
+        const coords = scenarioGeoJSON.geometry.coordinates as [number, number][]
+        if (coords.length < 2) return
+
+        let totalDist = 0
+        const segments: {
+            start: [number, number],
+            end: [number, number],
+            dx: number,
+            dy: number,
+            dist: number,
+            cumulativeDist: number
+        }[] = []
+        for (let i = 0; i < coords.length - 1; i++) {
+            const dx = coords[i + 1][0] - coords[i][0]
+            const dy = coords[i + 1][1] - coords[i][1]
+            const d = Math.sqrt(dx * dx + dy * dy)
+            totalDist += d
+            segments.push({ start: coords[i], end: coords[i + 1], dx, dy, dist: d, cumulativeDist: totalDist })
+        }
+
+        if (totalDist === 0) return
+
+        let animationId: number
+        let startTime: number | null = null
+        const duration = Math.min(Math.max(totalDist * 80, 2000), 8000)
+
+        const animate = (timestamp: number) => {
+            if (!startTime) startTime = timestamp
+            const progress = ((timestamp - startTime) % duration) / duration
+            const targetDist = progress * totalDist
+
+            let currentSegment = segments[0]
+            let prevDist = 0
+            for (let i = 0; i < segments.length; i++) {
+                if (targetDist <= segments[i].cumulativeDist) {
+                    currentSegment = segments[i]
+                    break
+                }
+                prevDist = segments[i].cumulativeDist
+            }
+
+            const segmentProgress = currentSegment.dist > 0 ? (targetDist - prevDist) / currentSegment.dist : 0
+            const currentLon = currentSegment.start[0] + currentSegment.dx * segmentProgress
+            const currentLat = currentSegment.start[1] + currentSegment.dy * segmentProgress
+
+            const map = mapRef.current?.getMap()
+            if (map && map.getSource('animated-pulse-source')) {
+                const source = map.getSource('animated-pulse-source') as maplibregl.GeoJSONSource
+                source.setData({
+                    type: 'FeatureCollection',
+                    features: [{
+                        type: 'Feature',
+                        properties: {},
+                        geometry: { type: 'Point', coordinates: [currentLon, currentLat] }
+                    }]
+                })
+            }
+            animationId = requestAnimationFrame(animate)
+        }
+        animationId = requestAnimationFrame(animate)
+        return () => cancelAnimationFrame(animationId)
+    }, [scenarioGeoJSON])
+
     const getModeIcon = (mode: string) => {
         const m = mode.toLowerCase()
         if (m.includes('sea') || m.includes('maritim') || m.includes('vessel')) return <Ship className="w-3.5 h-3.5 text-white" />
@@ -161,8 +227,9 @@ export default function LogisticsMap({
     }
 
     return (
-        <div className="w-full h-[600px] rounded-3xl overflow-hidden border border-slate-200 relative shadow-2xl bg-slate-50 group">
+        <div className="w-full h-[600px] rounded-3xl overflow-hidden border border-surface-200 relative shadow-2xl bg-surface-50 group">
             <MapLibreMap
+                ref={mapRef}
                 {...viewState}
                 onMove={evt => setViewState(evt.viewState)}
                 mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
@@ -196,7 +263,7 @@ export default function LogisticsMap({
                             type="line"
                             layout={{ 'line-join': 'round', 'line-cap': 'round' }}
                             paint={{
-                                'line-color': '#3b82f6',
+                                'line-color': '#6366f1',
                                 'line-width': 14,
                                 'line-opacity': 0.15,
                                 'line-blur': 8
@@ -213,7 +280,7 @@ export default function LogisticsMap({
                             type="line"
                             layout={{ 'line-join': 'round', 'line-cap': 'round' }}
                             paint={{
-                                'line-color': '#1d4ed8',
+                                'line-color': '#4338ca',
                                 'line-width': 5,
                                 'line-opacity': 1.0
                             }}
@@ -229,7 +296,7 @@ export default function LogisticsMap({
                             type="line"
                             layout={{ 'line-join': 'round', 'line-cap': 'round' }}
                             paint={{
-                                'line-color': '#93c5fd',
+                                'line-color': '#a5b4fc',
                                 'line-width': 3,
                                 'line-dasharray': [2, 4],
                                 'line-opacity': 0.9
@@ -238,11 +305,39 @@ export default function LogisticsMap({
                     </Source>
                 )}
 
+                {/* Real-time Pulse Orb */}
+                {scenarioGeoJSON && (
+                    <Source id="animated-pulse-source" type="geojson" data={{ type: 'FeatureCollection', features: [] }}>
+                        <Layer
+                            id="animated-pulse-glow"
+                            type="circle"
+                            paint={{
+                                'circle-radius': 12,
+                                'circle-color': '#4f46e5',
+                                'circle-opacity': 0.5,
+                                'circle-blur': 1,
+                                'circle-pitch-alignment': 'map'
+                            }}
+                        />
+                        <Layer
+                            id="animated-pulse-core"
+                            type="circle"
+                            paint={{
+                                'circle-radius': 4,
+                                'circle-color': '#ffffff',
+                                'circle-stroke-width': 2,
+                                'circle-stroke-color': '#4f46e5',
+                                'circle-pitch-alignment': 'map'
+                            }}
+                        />
+                    </Source>
+                )}
+
                 {midpoints.map((mid, idx) => (
                     <Marker key={idx} latitude={mid.lat} longitude={mid.lon} anchor="center">
-                        <div className="bg-blue-700 p-1.5 rounded-lg shadow-xl border border-white/30 scale-90 hover:scale-110 transition-transform cursor-help group/mode relative">
+                        <div className="bg-surface-700 p-1.5 rounded-lg shadow-xl border border-white/30 scale-90 hover:scale-110 transition-transform cursor-help group/mode relative">
                             {getModeIcon(mid.mode)}
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/mode:block bg-slate-900 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest whitespace-nowrap">
+                            <div className="absolute bottom-full left-1/2 -transurface-x-1/2 mb-2 hidden group-hover/mode:block bg-surface-900 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest whitespace-nowrap">
                                 {mid.mode.toUpperCase()} Segment
                             </div>
                         </div>
@@ -259,21 +354,21 @@ export default function LogisticsMap({
                     return (
                         <Marker key={node.id} latitude={node.latitude} longitude={node.longitude} anchor="bottom">
                             <div className="group/marker cursor-pointer flex flex-col items-center" onClick={(e) => { e.stopPropagation(); setSelectedNodeId(isSelected ? null : node.id); onNodeClick?.(node.id) }}>
-                                <div className={`${isSelected ? 'block' : 'hidden group-hover/marker:block'} absolute bottom-full mb-3 bg-white border border-slate-200 p-5 rounded-2xl text-[11px] z-50 shadow-2xl min-w-[260px]`}>
+                                <div className={`${isSelected ? 'block' : 'hidden group-hover/marker:block'} absolute bottom-full mb-3 bg-white border border-surface-200 p-5 rounded-2xl text-[11px] z-50 shadow-2xl min-w-[260px]`}>
                                     <div className="flex flex-col gap-4">
-                                        <div className="flex justify-between items-start gap-4 border-b border-slate-100 pb-3 text-slate-900">
+                                        <div className="flex justify-between items-start gap-4 border-b border-surface-100 pb-3 text-surface-900">
                                             <div>
                                                 <div className="font-black uppercase tracking-tight text-xs">{node.name}</div>
-                                                <div className="text-slate-400 font-bold uppercase text-[9px] tracking-widest mt-0.5">{node.type}</div>
+                                                <div className="text-surface-400 font-bold uppercase text-[9px] tracking-widest mt-0.5">{node.type}</div>
                                             </div>
-                                            <div className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600">
+                                            <div className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-surface-50 text-surface-600">
                                                 {isClosed ? 'OFFLINE' : `${utilization.toFixed(0)}% Load`}
                                             </div>
                                         </div>
                                         <div className="space-y-3">
                                             {instruction && (
-                                                <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 text-blue-900 leading-relaxed font-bold text-[10px]">
-                                                    <div className="flex items-center gap-2 mb-1.5 font-black uppercase tracking-widest text-[8px] text-blue-600">
+                                                <div className="p-3 bg-surface-50/50 rounded-xl border border-surface-100 text-surface-900 leading-relaxed font-bold text-[10px]">
+                                                    <div className="flex items-center gap-2 mb-1.5 font-black uppercase tracking-widest text-[8px] text-surface-600">
                                                         <Activity className="w-3 h-3" /> Master Plan Halt
                                                     </div>
                                                     {instruction}
@@ -282,8 +377,8 @@ export default function LogisticsMap({
                                         </div>
                                     </div>
                                 </div>
-                                <div className={`relative flex items-center justify-center p-2 rounded-full border shadow-xl transition-all ${isClosed ? 'bg-slate-200' : (scenarioPath?.some(n => n.id === node.id) ? 'bg-blue-600 border-blue-400' : 'bg-slate-50')}`}>
-                                    <MapPin className={`w-4 h-4 ${isClosed ? 'text-slate-500' : (scenarioPath?.some(n => n.id === node.id) ? 'text-white' : 'text-slate-400')}`} />
+                                <div className={`relative flex items-center justify-center p-2 rounded-full border shadow-xl transition-all ${isClosed ? 'bg-surface-200' : (scenarioPath?.some(n => n.id === node.id) ? 'bg-surface-600 border-surface-400' : 'bg-surface-50')}`}>
+                                    <MapPin className={`w-4 h-4 ${isClosed ? 'text-surface-500' : (scenarioPath?.some(n => n.id === node.id) ? 'text-white' : 'text-surface-400')}`} />
                                 </div>
                             </div>
                         </Marker>
@@ -292,13 +387,13 @@ export default function LogisticsMap({
             </MapLibreMap>
 
             <div className="absolute top-6 left-6 flex flex-col items-start gap-4 pointer-events-none">
-                <div className="h-10 w-10 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-xl shadow-xl flex items-center justify-center pointer-events-auto shadow-blue-500/10">
-                    <Info className="w-5 h-5 text-blue-600" />
+                <div className="h-10 w-10 bg-white/95 backdrop-blur-xl border border-surface-200 rounded-xl shadow-xl flex items-center justify-center pointer-events-auto shadow-surface-500/10">
+                    <Info className="w-5 h-5 text-surface-600" />
                 </div>
             </div>
 
-            <div className="absolute bottom-10 left-10 flex items-center gap-4 px-6 py-3 bg-slate-900/95 backdrop-blur-2xl rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white/80 border border-white/10 shadow-2xl">
-                <Maximize2 className="w-4 h-4 text-blue-400" />
+            <div className="absolute bottom-10 left-10 flex items-center gap-4 px-6 py-3 bg-surface-900/95 backdrop-blur-2xl rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white/80 border border-white/10 shadow-2xl">
+                <Maximize2 className="w-4 h-4 text-surface-400" />
                 <span>AI STRATEGIC NETWORK MAPPING</span>
                 {scenarioGeoJSON && (
                     <div className="flex items-center gap-1.5 ml-2 border-l border-white/20 pl-4 text-emerald-400">

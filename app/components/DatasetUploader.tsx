@@ -64,14 +64,14 @@ export default function DatasetUploader({ onComplete }: { onComplete: (id: strin
 
     const FileSlot = ({ label, id }: { label: string, id: string }) => (
         <div className={`p-4 rounded-xl border transition-all ${files[id]
-            ? 'border-blue-200 bg-blue-50/50 shadow-sm'
-            : 'border-slate-200 bg-white hover:border-slate-300'}`}
+            ? 'border-surface-200 bg-surface-50/50 shadow-sm'
+            : 'border-surface-200 bg-white hover:border-surface-300'}`}
         >
             <div className="flex justify-between items-center">
                 <div className="flex-1 min-w-0 mr-4">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</div>
-                    <div className="text-xs font-bold text-slate-700 flex items-center gap-2 truncate">
-                        {files[id] ? <FileText className="w-3.5 h-3.5 text-blue-600" /> : <Upload className="w-3.5 h-3.5 text-slate-300" />}
+                    <div className="text-[10px] font-bold text-surface-400 uppercase tracking-widest mb-1">{label}</div>
+                    <div className="text-xs font-bold text-surface-700 flex items-center gap-2 truncate">
+                        {files[id] ? <FileText className="w-3.5 h-3.5 text-surface-600" /> : <Upload className="w-3.5 h-3.5 text-surface-300" />}
                         {files[id] ? files[id]?.name : 'Unassigned'}
                     </div>
                 </div>
@@ -85,8 +85,8 @@ export default function DatasetUploader({ onComplete }: { onComplete: (id: strin
                 <label
                     htmlFor={`file-${id}`}
                     className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all ${files[id]
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        ? 'bg-surface-600 text-white hover:bg-surface-700'
+                        : 'bg-surface-100 text-surface-600 hover:bg-surface-200'}`}
                 >
                     {files[id] ? 'Replace' : 'Browse'}
                 </label>
@@ -95,28 +95,28 @@ export default function DatasetUploader({ onComplete }: { onComplete: (id: strin
     )
 
     return (
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 lg:p-10 space-y-10 shadow-xl shadow-slate-200/50">
+        <div className="bg-white border border-surface-200 rounded-3xl p-8 lg:p-10 space-y-10 shadow-xl shadow-surface-200/50">
             <header className="flex flex-col gap-2">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                        <Upload className="w-5 h-5 text-blue-600" />
+                    <div className="h-10 w-10 rounded-xl bg-surface-50 flex items-center justify-center">
+                        <Upload className="w-5 h-5 text-surface-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">Asset Import <span className="text-blue-600">Console</span></h2>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 ml-0.5">Define network topology via RFC-compliant CSV structures</p>
+                        <h2 className="text-2xl font-black tracking-tight text-surface-900 uppercase">Asset Import <span className="text-surface-600">Console</span></h2>
+                        <p className="text-[10px] text-surface-400 font-bold uppercase tracking-widest mt-0.5 ml-0.5">Define network topology via RFC-compliant CSV structures</p>
                     </div>
                 </div>
             </header>
 
             <div className="space-y-6">
                 <div className="space-y-2">
-                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Dataset Label</label>
+                    <label className="text-[10px] text-surface-500 font-bold uppercase tracking-widest ml-1">Dataset Label</label>
                     <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g. Q3 Global Logistics Baseline"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-bold placeholder:text-slate-300"
+                        className="w-full bg-surface-50 border border-surface-200 rounded-xl px-4 py-3.5 text-surface-900 focus:outline-none focus:ring-2 focus:ring-surface-600/20 focus:border-surface-600 transition-all font-bold placeholder:text-surface-300"
                     />
                 </div>
 
@@ -127,9 +127,9 @@ export default function DatasetUploader({ onComplete }: { onComplete: (id: strin
                     <FileSlot label="Fuel Index Matrices" id="fuel_indices" />
                     <FileSlot label="Shipment Ledger (Optional)" id="shipments" />
 
-                    <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 flex items-center gap-4">
-                        <Info className="w-5 h-5 text-slate-400 shrink-0" />
-                        <p className="text-[10px] text-slate-400 font-medium leading-relaxed uppercase tracking-tight">
+                    <div className="p-4 rounded-xl border border-dashed border-surface-200 bg-surface-50 flex items-center gap-4">
+                        <Info className="w-5 h-5 text-surface-400 shrink-0" />
+                        <p className="text-[10px] text-surface-400 font-medium leading-relaxed uppercase tracking-tight">
                             Ensure all files follow the standard schema. Incomplete datasets may cause simulation instability.
                         </p>
                     </div>
@@ -146,7 +146,7 @@ export default function DatasetUploader({ onComplete }: { onComplete: (id: strin
             <button
                 onClick={handleUpload}
                 disabled={uploading}
-                className="w-full bg-blue-600 text-white hover:bg-blue-700 rounded-xl py-4.5 font-black uppercase tracking-[0.2em] transition-all shadow-lg shadow-blue-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 overflow-hidden"
+                className="w-full bg-surface-600 text-white hover:bg-surface-700 rounded-xl py-4.5 font-black uppercase tracking-[0.2em] transition-all shadow-lg shadow-surface-200 hover:-transurface-y-0.5 active:transurface-y-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 overflow-hidden"
             >
                 {uploading ? (
                     <>

@@ -77,17 +77,17 @@ export default function DatasetSelector({ onSelect }: { onSelect: (id: string) =
     }
 
     if (loading) return (
-        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
-            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
-            <div className="text-xs uppercase font-bold text-slate-400 tracking-widest">Synchronizing Library...</div>
+        <div className="bg-white border border-surface-200 rounded-2xl p-12 text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-surface-600 border-t-transparent rounded-full mx-auto mb-4" />
+            <div className="text-xs uppercase font-bold text-surface-400 tracking-widest">Synchronizing Library...</div>
         </div>
     )
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center px-2">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Available Network Models</h3>
-                <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-1 rounded">Total: {datasets.length}</span>
+                <h3 className="text-xs font-bold text-surface-500 uppercase tracking-widest">Available Network Models</h3>
+                <span className="text-[10px] font-bold text-surface-400 uppercase bg-surface-100 px-2 py-1 rounded">Total: {datasets.length}</span>
             </div>
 
             {error && (
@@ -106,8 +106,8 @@ export default function DatasetSelector({ onSelect }: { onSelect: (id: string) =
                         key={d.id}
                         onClick={() => handleSelect(d.id)}
                         className={`p-5 rounded-2xl border transition-all text-left flex justify-between items-center group relative overflow-hidden cursor-pointer ${activeId === d.id
-                            ? 'bg-blue-50/50 border-blue-200 shadow-sm'
-                            : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-md'
+                            ? 'bg-surface-50/50 border-surface-200 shadow-sm'
+                            : 'bg-white border-surface-200 hover:border-surface-300 hover:shadow-md'
                             }`}
                         role="button"
                         tabIndex={0}
@@ -119,18 +119,18 @@ export default function DatasetSelector({ onSelect }: { onSelect: (id: string) =
                         }}
                     >
                         <div className="flex items-center gap-5 relative z-10">
-                            <div className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${activeId === d.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-100'}`}>
+                            <div className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${activeId === d.id ? 'bg-surface-600 text-white shadow-lg shadow-surface-200 scale-105' : 'bg-surface-50 text-surface-400 group-hover:bg-surface-100'}`}>
                                 <HardDrive className="w-5 h-5" />
                             </div>
                             <div>
-                                <div className={`text-sm font-bold tracking-tight mb-1 ${activeId === d.id ? 'text-blue-900' : 'text-slate-900'}`}>{d.name}</div>
+                                <div className={`text-sm font-bold tracking-tight mb-1 ${activeId === d.id ? 'text-surface-900' : 'text-surface-900'}`}>{d.name}</div>
                                 <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                    <div className="flex items-center gap-1.5 text-[10px] text-surface-400 font-bold uppercase tracking-wider">
                                         <Calendar className="w-3.5 h-3.5" />
                                         {new Date(d.uploaded_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </div>
-                                    <div className="h-1 w-1 rounded-full bg-slate-300" />
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Verified State</div>
+                                    <div className="h-1 w-1 rounded-full bg-surface-300" />
+                                    <div className="text-[10px] text-surface-400 font-bold uppercase tracking-wider">Verified State</div>
                                 </div>
                             </div>
                         </div>
@@ -138,29 +138,29 @@ export default function DatasetSelector({ onSelect }: { onSelect: (id: string) =
                             <button
                                 onClick={(e) => handleDelete(e, d.id)}
                                 disabled={deletingIds.has(d.id)}
-                                className={`h-9 w-9 flex items-center justify-center rounded-lg transition-all ${deletingIds.has(d.id) ? 'text-slate-400 bg-slate-50' : 'text-slate-300 hover:text-red-600 hover:bg-red-50 group-hover:opacity-100 opacity-0'}`}
+                                className={`h-9 w-9 flex items-center justify-center rounded-lg transition-all ${deletingIds.has(d.id) ? 'text-surface-400 bg-surface-50' : 'text-surface-300 hover:text-red-600 hover:bg-red-50 group-hover:opacity-100 opacity-0'}`}
                                 title="Delete Asset"
                             >
                                 {deletingIds.has(d.id) ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                             </button>
 
                             {activeId === d.id ? (
-                                <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                                <CheckCircle2 className="w-5 h-5 text-surface-600" />
                             ) : (
-                                <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                                <div className="h-8 w-8 rounded-full bg-surface-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                    <ChevronRight className="w-4 h-4 text-surface-400 group-hover:transurface-x-0.5 transition-transform" />
                                 </div>
                             )}
                         </div>
                     </div>
                 ))}
                 {datasets.length === 0 && (
-                    <div className="p-12 border-2 border-dashed border-slate-200 rounded-3xl text-center bg-white">
-                        <div className="mx-auto h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center mb-4">
-                            <Search className="w-6 h-6 text-slate-300" />
+                    <div className="p-12 border-2 border-dashed border-surface-200 rounded-3xl text-center bg-white">
+                        <div className="mx-auto h-12 w-12 rounded-full bg-surface-50 flex items-center justify-center mb-4">
+                            <Search className="w-6 h-6 text-surface-300" />
                         </div>
-                        <h4 className="text-slate-900 font-bold mb-1">No models found</h4>
-                        <p className="text-xs text-slate-500 max-w-xs mx-auto">Upload a new network configuration to begin running logistics simulations.</p>
+                        <h4 className="text-surface-900 font-bold mb-1">No models found</h4>
+                        <p className="text-xs text-surface-500 max-w-xs mx-auto">Upload a new network configuration to begin running logistics simulations.</p>
                     </div>
                 )}
             </div>

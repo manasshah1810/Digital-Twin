@@ -39,6 +39,8 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
     const [weightMode, setWeightMode] = useState<'balanced' | 'co2' | 'time'>('balanced')
     const [isAIDataset, setIsAIDataset] = useState(false)
     const [congestedNodes, setCongestedNodes] = useState<Record<string, number>>({})
+    const [customDisruption, setCustomDisruption] = useState('')
+    const [isAnalyzingDisruption, setIsAnalyzingDisruption] = useState(false)
 
     const router = useRouter()
 
@@ -193,6 +195,36 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
         }
     }
 
+    const handleCustomDisruption = async () => {
+        if (!customDisruption.trim()) return;
+        setIsAnalyzingDisruption(true);
+        try {
+            const res = await fetch('/api/ai-disruption', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: customDisruption,
+                    nodes: nodes.map(n => ({ id: n.id, name: n.name, type: n.type })),
+                    availableModes
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                if (data.closedNodeIds) setClosedNodeIds(data.closedNodeIds);
+                if (data.congestedNodes) setCongestedNodes(data.congestedNodes);
+                if (data.forbiddenModes) setForbiddenModes(data.forbiddenModes);
+                if (data.fuelMultiplier) setFuelMultiplier(data.fuelMultiplier);
+                setCustomDisruption('');
+            } else {
+                console.error(data.error);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsAnalyzingDisruption(false);
+        }
+    };
+
     const handleWizardRun = (config: any) => {
         setSourceNodeId(config.sourceNodeId)
         setTargetNodeId(config.targetNodeId)
@@ -237,24 +269,24 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
                         AI Generated Dataset
                     </div>
                 ) : (
-                    <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="flex bg-white p-1 rounded-2xl border border-surface-200 shadow-sm">
                         <button
                             onClick={() => setEditorMode('expert')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editorMode === 'expert' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editorMode === 'expert' ? 'bg-surface-900 text-white shadow-xl' : 'text-surface-400 hover:text-surface-600'}`}
                         >
                             <Settings2 className="w-3.5 h-3.5" />
                             Expert Mode
                         </button>
                         <button
                             onClick={() => setEditorMode('autonomous')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editorMode === 'autonomous' ? 'bg-blue-600 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editorMode === 'autonomous' ? 'bg-surface-600 text-white shadow-xl' : 'text-surface-400 hover:text-surface-600'}`}
                         >
                             <Navigation className="w-3.5 h-3.5" />
                             Normal Mode
                         </button>
                     </div>
                 )}
-                <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                <div className="flex items-center gap-2 text-surface-400 text-[10px] font-bold uppercase tracking-widest">
                     {isAIDataset ? (
                         <>
                             <Sparkles className="w-4 h-4 text-amber-500" />
@@ -262,7 +294,7 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
                         </>
                     ) : editorMode === 'autonomous' ? (
                         <>
-                            <Navigation className="w-4 h-4 text-blue-600" />
+                            <Navigation className="w-4 h-4 text-surface-600" />
                             CSV Routes Only
                         </>
                     ) : (
@@ -277,10 +309,10 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start animate-in fade-in duration-500">
                 {/* Column 1: History */}
                 <div className="xl:col-span-2 space-y-4 sticky top-8">
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
-                        <div className="flex items-center gap-2 mb-4 border-b border-slate-50 pb-3">
-                            <GitFork className="w-3.5 h-3.5 text-blue-600" />
-                            <h3 className="font-black text-slate-800 text-[10px] uppercase tracking-widest">Tactical History</h3>
+                    <div className="bg-white border border-surface-200 rounded-2xl shadow-sm p-5">
+                        <div className="flex items-center gap-2 mb-4 border-b border-surface-50 pb-3">
+                            <GitFork className="w-3.5 h-3.5 text-surface-600" />
+                            <h3 className="font-black text-surface-800 text-[10px] uppercase tracking-widest">Tactical History</h3>
                         </div>
                         <ScenarioTree
                             currentScenarioId={scenarioId}
@@ -292,25 +324,25 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
 
                 {/* Column 2: Configuration */}
                 <div className="xl:col-span-4 space-y-6">
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div className="bg-white border border-surface-200 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center bg-surface-50/50">
                             <div className="flex items-center gap-2">
-                                <Settings2 className="w-4 h-4 text-blue-600" />
-                                <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest">Protocol Config</h2>
+                                <Settings2 className="w-4 h-4 text-surface-600" />
+                                <h2 className="text-xs font-black text-surface-900 uppercase tracking-widest">Protocol Config</h2>
                             </div>
-                            <div className="flex bg-white p-1 rounded-lg border border-slate-200">
-                                <button onClick={() => setMode('single')} className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-tighter transition-all ${mode === 'single' ? 'bg-slate-900 text-white' : 'text-slate-400'}`}>Single</button>
-                                <button onClick={() => setMode('batch')} className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-tighter transition-all ${mode === 'batch' ? 'bg-slate-900 text-white' : 'text-slate-400'}`}>Batch</button>
+                            <div className="flex bg-white p-1 rounded-lg border border-surface-200">
+                                <button onClick={() => setMode('single')} className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-tighter transition-all ${mode === 'single' ? 'bg-surface-900 text-white' : 'text-surface-400'}`}>Single</button>
+                                <button onClick={() => setMode('batch')} className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-tighter transition-all ${mode === 'batch' ? 'bg-surface-900 text-white' : 'text-surface-400'}`}>Batch</button>
                             </div>
                         </div>
 
                         <div className="p-6 space-y-6">
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
+                                    <label className="text-[9px] text-surface-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
                                         <MapPin className="w-3 h-3" /> Origin Station
                                     </label>
-                                    <select value={sourceNodeId} onChange={(e) => setSourceNodeId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 outline-none appearance-none transition-all">
+                                    <select value={sourceNodeId} onChange={(e) => setSourceNodeId(e.target.value)} className="w-full bg-surface-50 border border-surface-200 rounded-xl px-4 py-3 text-sm font-bold text-surface-900 focus:ring-2 focus:ring-surface-600/10 focus:border-surface-600 outline-none appearance-none transition-all">
                                         <option value="" disabled>Select Station...</option>
                                         {nodes.map(node => <option key={node.id} value={node.id}>{node.name}</option>)}
                                     </select>
@@ -318,24 +350,24 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
 
                                 {mode === 'single' ? (
                                     <div className="space-y-2">
-                                        <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
+                                        <label className="text-[9px] text-surface-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
                                             <Navigation className="w-3 h-3" /> Target Destination
                                         </label>
-                                        <select value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 outline-none appearance-none transition-all">
+                                        <select value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} className="w-full bg-surface-50 border border-surface-200 rounded-xl px-4 py-3 text-sm font-bold text-surface-900 focus:ring-2 focus:ring-surface-600/10 focus:border-surface-600 outline-none appearance-none transition-all">
                                             <option value="" disabled>Select Station...</option>
                                             {nodes.map(node => <option key={node.id} value={node.id}>{node.name}</option>)}
                                         </select>
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
-                                        <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
+                                        <label className="text-[9px] text-surface-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
                                             <Navigation className="w-3 h-3" /> Registry Targets
                                         </label>
-                                        <div className="max-h-[120px] overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
+                                        <div className="max-h-[120px] overflow-y-auto bg-surface-50 border border-surface-200 rounded-xl p-3 space-y-1">
                                             {nodes.filter(n => n.id !== sourceNodeId).map(node => (
                                                 <label key={node.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors group">
-                                                    <input type="checkbox" checked={selectedTargets.includes(node.id)} onChange={(e) => e.target.checked ? setSelectedTargets([...selectedTargets, node.id]) : setSelectedTargets(selectedTargets.filter(id => id !== node.id))} className="accent-blue-600 h-3.5 w-3.5" />
-                                                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-slate-900 uppercase">{node.name}</span>
+                                                    <input type="checkbox" checked={selectedTargets.includes(node.id)} onChange={(e) => e.target.checked ? setSelectedTargets([...selectedTargets, node.id]) : setSelectedTargets(selectedTargets.filter(id => id !== node.id))} className="accent-surface-600 h-3.5 w-3.5" />
+                                                    <span className="text-[10px] font-bold text-surface-500 group-hover:text-surface-900 uppercase">{node.name}</span>
                                                 </label>
                                             ))}
                                         </div>
@@ -344,77 +376,77 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
+                                        <label className="text-[9px] text-surface-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
                                             <FileText className="w-3 h-3" /> Parcel Count
                                         </label>
                                         <input
                                             type="number"
                                             value={parcelCount}
                                             onChange={(e) => setParcelCount(parseInt(e.target.value) || 0)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all"
+                                            className="w-full bg-surface-50 border border-surface-200 rounded-xl px-4 py-3 text-sm font-bold text-surface-900 focus:ring-2 focus:ring-surface-600/10 focus:border-surface-600 outline-none transition-all"
                                             min="1"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
+                                        <label className="text-[9px] text-surface-400 font-bold uppercase tracking-widest flex items-center gap-2 px-1">
                                             <Activity className="w-3 h-3" /> Unit Weight (kg)
                                         </label>
                                         <input
                                             type="number"
                                             value={parcelWeight}
                                             onChange={(e) => setParcelWeight(parseInt(e.target.value) || 0)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 outline-none transition-all"
+                                            className="w-full bg-surface-50 border border-surface-200 rounded-xl px-4 py-3 text-sm font-bold text-surface-900 focus:ring-2 focus:ring-surface-600/10 focus:border-surface-600 outline-none transition-all"
                                             min="1"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
-                                <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Fuel Price</span>
-                                <span className="text-blue-600 font-black text-lg tabular-nums">{fuelMultiplier.toFixed(1)}x</span>
+                            <div className="pt-6 border-t border-surface-100 flex items-center justify-between">
+                                <span className="text-[9px] text-surface-400 font-black uppercase tracking-widest">Fuel Price</span>
+                                <span className="text-surface-600 font-black text-lg tabular-nums">{fuelMultiplier.toFixed(1)}x</span>
                             </div>
-                            <input type="range" min="1" max="5" step="0.1" value={fuelMultiplier} onChange={(e) => setFuelMultiplier(parseFloat(e.target.value))} className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-blue-600" />
+                            <input type="range" min="1" max="5" step="0.1" value={fuelMultiplier} onChange={(e) => setFuelMultiplier(parseFloat(e.target.value))} className="w-full h-1.5 bg-surface-100 rounded-full appearance-none cursor-pointer accent-surface-600" />
 
-                            <div className="pt-6 border-t border-slate-100 space-y-4">
+                            <div className="pt-6 border-t border-surface-100 space-y-4">
                                 <div className="flex flex-col gap-3">
                                     <div className="flex justify-between items-center px-1">
-                                        <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Exclude Modes ({availableModes.length})</label>
+                                        <label className="text-[9px] text-surface-400 font-bold uppercase tracking-widest">Exclude Modes ({availableModes.length})</label>
                                         <button
                                             onClick={() => setForbiddenModes(forbiddenModes.length === availableModes.length ? [] : [...availableModes])}
-                                            className="text-[8px] font-black text-blue-600 uppercase hover:underline"
+                                            className="text-[8px] font-black text-surface-600 uppercase hover:underline"
                                         >
                                             {forbiddenModes.length === availableModes.length ? 'Clear All' : 'Ban All'}
                                         </button>
                                     </div>
-                                    <div className="max-h-[160px] overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-3 grid grid-cols-2 gap-2 custom-scrollbar">
+                                    <div className="max-h-[160px] overflow-y-auto bg-surface-50 border border-surface-200 rounded-xl p-3 grid grid-cols-2 gap-2 custom-scrollbar">
                                         {availableModes.map(m => (
-                                            <label key={m} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all border ${forbiddenModes.includes(m) ? 'bg-red-50/50 border-red-100' : 'bg-white border-transparent hover:border-slate-200'}`}>
+                                            <label key={m} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all border ${forbiddenModes.includes(m) ? 'bg-red-50/50 border-red-100' : 'bg-white border-transparent hover:border-surface-200'}`}>
                                                 <input
                                                     type="checkbox"
                                                     checked={forbiddenModes.includes(m)}
                                                     onChange={(e) => e.target.checked ? setForbiddenModes([...forbiddenModes, m]) : setForbiddenModes(forbiddenModes.filter(fm => fm !== m))}
                                                     className="accent-red-600 h-3.5 w-3.5"
                                                 />
-                                                <span className={`text-[9px] font-black uppercase tracking-tighter truncate ${forbiddenModes.includes(m) ? 'text-red-600' : 'text-slate-600'}`}>{m}</span>
+                                                <span className={`text-[9px] font-black uppercase tracking-tighter truncate ${forbiddenModes.includes(m) ? 'text-red-600' : 'text-surface-600'}`}>{m}</span>
                                             </label>
                                         ))}
-                                        {availableModes.length === 0 && <div className="col-span-2 py-4 text-center text-[9px] font-bold text-slate-300 uppercase italic">Analyzing dataset for modes...</div>}
+                                        {availableModes.length === 0 && <div className="col-span-2 py-4 text-center text-[9px] font-bold text-surface-300 uppercase italic">Analyzing dataset for modes...</div>}
                                     </div>
                                 </div>
 
-                                <div className="space-y-3 pt-4 border-t border-slate-100">
-                                    <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest px-1">Optimization Priority</label>
-                                    <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-200">
+                                <div className="space-y-3 pt-4 border-t border-surface-100">
+                                    <label className="text-[9px] text-surface-400 font-bold uppercase tracking-widest px-1">Optimization Priority</label>
+                                    <div className="flex bg-surface-50 p-1 rounded-xl border border-surface-200">
                                         {[
                                             { id: 'balanced', label: 'Economy', icon: <Activity className="w-2.5 h-2.5" /> },
                                             { id: 'co2', label: 'Eco', icon: <Sparkles className="w-2.5 h-2.5 text-emerald-500" /> },
-                                            { id: 'time', label: 'Velocity', icon: <Clock className="w-2.5 h-2.5 text-blue-500" /> }
+                                            { id: 'time', label: 'Velocity', icon: <Clock className="w-2.5 h-2.5 text-surface-500" /> }
                                         ].map(opt => (
                                             <button
                                                 key={opt.id}
                                                 onClick={() => setWeightMode(opt.id as any)}
-                                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[8px] font-black uppercase transition-all ${weightMode === opt.id ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[8px] font-black uppercase transition-all ${weightMode === opt.id ? 'bg-white text-surface-900 shadow-sm border border-surface-200' : 'text-surface-400 hover:text-surface-600'}`}
                                             >
                                                 {opt.icon}
                                                 {opt.label}
@@ -438,18 +470,18 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
                                             <AlertCircle className="w-2.5 h-2.5" /> {nodes.find(n => n.id === id)?.name || 'Node'} — {Math.round(mult * 100)}% capacity
                                         </button>
                                     ))}
-                                    {closedNodeIds.length === 0 && Object.keys(congestedNodes).length === 0 && <span className="text-[9px] text-slate-300 font-bold uppercase tracking-widest italic py-1">No disruptions active</span>}
+                                    {closedNodeIds.length === 0 && Object.keys(congestedNodes).length === 0 && <span className="text-[9px] text-surface-300 font-bold uppercase tracking-widest italic py-1">No disruptions active</span>}
                                 </div>
 
                                 {/* Preset Disruption Scenarios */}
-                                <div className="pt-4 border-t border-slate-100 space-y-2">
-                                    <label className="text-[9px] text-slate-400 font-bold uppercase tracking-widest px-1">Quick Disruptions</label>
+                                <div className="pt-4 border-t border-surface-100 space-y-2">
+                                    <label className="text-[9px] text-surface-400 font-bold uppercase tracking-widest px-1">Quick Disruptions</label>
                                     <div className="grid grid-cols-3 gap-2">
                                         <button
                                             onClick={() => {
                                                 setForbiddenModes(prev => prev.includes('rail') ? prev : [...prev, 'rail'])
                                             }}
-                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${forbiddenModes.includes('rail') ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-500 hover:border-red-200 hover:text-red-500'}`}
+                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${forbiddenModes.includes('rail') ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-surface-200 text-surface-500 hover:border-red-200 hover:text-red-500'}`}
                                         >
                                             <ShieldAlert className="w-3.5 h-3.5" />
                                             Rail Strike
@@ -463,24 +495,43 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
                                                     setCongestedNodes(congested)
                                                 }
                                             }}
-                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${Object.keys(congestedNodes).length > 0 ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-200 hover:text-amber-500'}`}
+                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${Object.keys(congestedNodes).length > 0 ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-white border-surface-200 text-surface-500 hover:border-amber-200 hover:text-amber-500'}`}
                                         >
                                             <AlertCircle className="w-3.5 h-3.5" />
                                             Port Congestion
                                         </button>
                                         <button
                                             onClick={() => setFuelMultiplier(2.5)}
-                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${fuelMultiplier >= 2.5 ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-white border-slate-200 text-slate-500 hover:border-orange-200 hover:text-orange-500'}`}
+                                            className={`px-3 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wide transition-all border flex flex-col items-center gap-1 ${fuelMultiplier >= 2.5 ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-white border-surface-200 text-surface-500 hover:border-orange-200 hover:text-orange-500'}`}
                                         >
                                             <Activity className="w-3.5 h-3.5" />
                                             Fuel Crisis
                                         </button>
                                     </div>
+                                    <div className="mt-3 relative flex items-center">
+                                        <input
+                                            type="text"
+                                            value={customDisruption}
+                                            onChange={(e) => setCustomDisruption(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleCustomDisruption()}
+                                            disabled={isAnalyzingDisruption}
+                                            placeholder="Type custom disruption (e.g., 'Port of Berlin is heavily congested')..."
+                                            className="w-full bg-surface-50 border border-surface-200 rounded-xl pl-4 pr-10 py-3 text-[10px] font-bold text-surface-900 focus:ring-2 focus:ring-surface-600/10 focus:border-surface-600 outline-none transition-all placeholder:text-surface-300 placeholder:italic"
+                                        />
+                                        <button
+                                            onClick={handleCustomDisruption}
+                                            disabled={isAnalyzingDisruption || !customDisruption.trim()}
+                                            className="absolute right-2 p-1.5 bg-surface-900 text-white rounded-lg hover:bg-black transition-colors disabled:opacity-50"
+                                            title="Analyze Disruption"
+                                        >
+                                            {isAnalyzingDisruption ? <Clock className="w-3 h-3 animate-spin" /> : <Bot className="w-3 h-3" />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <button onClick={() => handleOptimize()} disabled={isOptimizing} className="w-full bg-slate-900 text-white rounded-xl py-4 font-black uppercase tracking-[0.2em] text-[10px] hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-slate-200">
-                                {isOptimizing ? <Clock className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4 text-blue-500" />}
+                            <button onClick={() => handleOptimize()} disabled={isOptimizing} className="w-full bg-brand-500 text-white rounded-xl py-4 font-black uppercase tracking-[0.2em] text-[10px] hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-brand-500/20">
+                                {isOptimizing ? <Clock className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4 text-white/50" />}
                                 {isOptimizing ? 'Finding best route...' : 'Find Route'}
                             </button>
                         </div>
@@ -510,14 +561,14 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
 
                             {error.diagnostics?.infrastructureProposal && (
                                 <div className="mt-6 pt-6 border-t border-red-100">
-                                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                                    <div className="bg-white border border-surface-200 rounded-xl p-4 shadow-sm">
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
-                                                <div className="text-[8px] font-black text-blue-600 uppercase mb-1">AI Recommendation</div>
-                                                <div className="text-[10px] font-black text-slate-800 uppercase italic">New {error.diagnostics.infrastructureProposal.mode} Link ({error.diagnostics.infrastructureProposal.estimatedDistance}km)</div>
+                                                <div className="text-[8px] font-black text-surface-600 uppercase mb-1">AI Recommendation</div>
+                                                <div className="text-[10px] font-black text-surface-800 uppercase italic">New {error.diagnostics.infrastructureProposal.mode} Link ({error.diagnostics.infrastructureProposal.estimatedDistance}km)</div>
                                             </div>
                                         </div>
-                                        <button onClick={() => { setForbiddenModes([]); handleOptimize(); }} className="w-full mt-2 py-2.5 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                                        <button onClick={() => { setForbiddenModes([]); handleOptimize(); }} className="w-full mt-2 py-2.5 bg-surface-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
                                             Apply Fix
                                         </button>
                                     </div>
@@ -542,25 +593,25 @@ export default function ScenarioEditor({ scenarioId, onSelectScenario }: EditorP
                     )}
 
                     {!result && !error && !isOptimizing && (
-                        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm">
-                            <div className="h-20 w-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                                <Settings2 className="w-8 h-8 text-slate-300" />
+                        <div className="bg-white border border-surface-200 rounded-3xl p-12 text-center shadow-sm">
+                            <div className="h-20 w-20 bg-surface-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-surface-100">
+                                <Settings2 className="w-8 h-8 text-surface-300" />
                             </div>
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Ready</h3>
-                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] max-w-xs mx-auto">Select origin and destination, then click Find Route</p>
+                            <h3 className="text-xl font-black text-surface-900 uppercase tracking-tight mb-2">Ready</h3>
+                            <p className="text-surface-400 text-[10px] font-black uppercase tracking-[0.2em] max-w-xs mx-auto">Select origin and destination, then click Find Route</p>
                         </div>
                     )}
 
                     {isOptimizing && (
-                        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-slate-50 overflow-hidden">
-                                <div className="h-full bg-blue-600 animate-[loading_2s_ease-in-out_infinite]" style={{ width: '40%' }} />
+                        <div className="bg-white border border-surface-200 rounded-3xl p-12 text-center shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-surface-50 overflow-hidden">
+                                <div className="h-full bg-surface-600 animate-[loading_2s_ease-in-out_infinite]" style={{ width: '40%' }} />
                             </div>
-                            <div className="h-20 w-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100 animate-pulse">
-                                <Bot className="w-8 h-8 text-blue-600" />
+                            <div className="h-20 w-20 bg-surface-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-surface-100 animate-pulse">
+                                <Bot className="w-8 h-8 text-surface-600" />
                             </div>
-                            <h3 className="text-xl font-black text-blue-900 uppercase tracking-tight mb-2">Finding Routes</h3>
-                            <p className="text-blue-500 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Checking all possible paths...</p>
+                            <h3 className="text-xl font-black text-surface-900 uppercase tracking-tight mb-2">Finding Routes</h3>
+                            <p className="text-surface-500 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Checking all possible paths...</p>
                         </div>
                     )}
                 </div>

@@ -42,7 +42,7 @@ export default async function ScenarioReplayPage({ params }: ReplayPageProps) {
                         href="/dashboard"
                         className="group flex items-center gap-2 text-white/40 hover:text-white transition-colors"
                     >
-                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        <ArrowLeft className="w-4 h-4 group-hover:-transurface-x-1 transition-transform" />
                         <span className="text-xs font-black uppercase tracking-widest">Back to Control Center</span>
                     </Link>
                     <div className="flex items-center gap-4">

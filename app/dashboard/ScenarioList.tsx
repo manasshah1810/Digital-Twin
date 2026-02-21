@@ -68,7 +68,7 @@ export default function ScenarioList() {
     }, [scenarios, selectedId])
 
     if (loading) return (
-        <div className="h-64 flex flex-col items-center justify-center gap-4 text-slate-400">
+        <div className="h-64 flex flex-col items-center justify-center gap-4 text-surface-400">
             <RefreshCcw className="w-6 h-6 animate-spin" />
             <span className="text-xs font-bold uppercase tracking-widest">Synchronizing Network State...</span>
         </div>
@@ -76,13 +76,13 @@ export default function ScenarioList() {
 
     if (!activeDatasetId) {
         return (
-            <div className="bg-white border border-slate-200 rounded-3xl p-32 flex flex-col items-center justify-center text-center shadow-sm">
-                <div className="h-20 w-20 rounded-2xl bg-slate-50 flex items-center justify-center mb-8 border border-slate-100 shadow-inner">
-                    <Database className="w-10 h-10 text-slate-300" />
+            <div className="bg-white border border-surface-200 rounded-3xl p-32 flex flex-col items-center justify-center text-center shadow-sm">
+                <div className="h-20 w-20 rounded-2xl bg-surface-50 flex items-center justify-center mb-8 border border-surface-100 shadow-inner">
+                    <Database className="w-10 h-10 text-surface-300" />
                 </div>
-                <h3 className="text-2xl font-black mb-4 text-slate-900 tracking-tight uppercase">Control Center Offline</h3>
-                <p className="text-slate-500 max-w-sm text-sm mb-10 leading-relaxed font-bold uppercase tracking-widest opacity-60">Authorize a logistics dataset to initialize simulation capabilities.</p>
-                <Link href="/dashboard/datasets" className="px-10 py-4 bg-slate-900 text-white rounded-xl font-black uppercase tracking-[0.2em] text-xs hover:bg-black transition-all shadow-xl shadow-slate-200">
+                <h3 className="text-2xl font-black mb-4 text-surface-900 tracking-tight uppercase">Control Center Offline</h3>
+                <p className="text-surface-500 max-w-sm text-sm mb-10 leading-relaxed font-bold uppercase tracking-widest opacity-60">Authorize a logistics dataset to initialize simulation capabilities.</p>
+                <Link href="/dashboard/datasets" className="px-10 py-4 bg-surface-900 text-white rounded-xl font-black uppercase tracking-[0.2em] text-xs hover:bg-black transition-all shadow-xl shadow-surface-200">
                     Connect Dataset
                 </Link>
             </div>
@@ -98,14 +98,14 @@ export default function ScenarioList() {
                     onSelectScenario={(id) => setSelectedId(id)}
                 />
             ) : scenarios.length === 0 ? (
-                <div className="bg-white border border-slate-200 rounded-3xl p-32 flex flex-col items-center justify-center text-center shadow-sm">
-                    <div className="h-20 w-20 rounded-2xl bg-slate-50 flex items-center justify-center mb-8 border border-slate-100 italic font-black text-slate-300">?</div>
-                    <h3 className="text-xl font-black mb-4 text-slate-900 uppercase">No Tactical Branches</h3>
-                    <p className="text-slate-500 max-w-sm text-[10px] mb-10 leading-relaxed font-black uppercase tracking-widest opacity-60">This dataset has no active scenarios. Create a baseline to start.</p>
-                    <button onClick={handleCreate} className="px-8 py-3 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px]">Initialize Baseline</button>
+                <div className="bg-white border border-surface-200 rounded-3xl p-32 flex flex-col items-center justify-center text-center shadow-sm">
+                    <div className="h-20 w-20 rounded-2xl bg-surface-50 flex items-center justify-center mb-8 border border-surface-100 italic font-black text-surface-300">?</div>
+                    <h3 className="text-xl font-black mb-4 text-surface-900 uppercase">No Tactical Branches</h3>
+                    <p className="text-surface-500 max-w-sm text-[10px] mb-10 leading-relaxed font-black uppercase tracking-widest opacity-60">This dataset has no active scenarios. Create a baseline to start.</p>
+                    <button onClick={handleCreate} className="px-8 py-3 bg-surface-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px]">Initialize Baseline</button>
                 </div>
             ) : (
-                <div className="h-64 flex items-center justify-center text-slate-300 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">
+                <div className="h-64 flex items-center justify-center text-surface-300 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">
                     Routing...
                 </div>
             )}

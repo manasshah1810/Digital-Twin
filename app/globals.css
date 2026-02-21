@@ -4,26 +4,67 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --color-white: 255 255 255;
+    --color-black: 0 0 0;
+
+    /* Surface = Zinc, the cleanest enterprise neutral */
+    --surface-50: 250 250 250;
+    --surface-100: 244 244 245;
+    --surface-200: 228 228 231;
+    --surface-300: 212 212 216;
+    --surface-400: 161 161 170;
+    --surface-500: 113 113 122;
+    --surface-600: 82 82 91;
+    --surface-700: 63 63 70;
+    --surface-800: 39 39 42;
+    --surface-900: 24 24 27;
+    --surface-950: 9 9 11;
+
+    /* Brand = Indigo */
+    --brand-500: 79 70 229;
+
+    --background: 250 250 250;
+    --foreground: 9 9 11;
+    --card: 255 255 255;
+    --card-foreground: 24 24 27;
+    --primary: 9 9 11;
+    --primary-foreground: 250 250 250;
+    --secondary: 244 244 245;
+    --secondary-foreground: 24 24 27;
+    --muted: 244 244 245;
+    --muted-foreground: 113 113 122;
+    --border: 228 228 231;
+    --input: 228 228 231;
+    --ring: 24 24 27;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Auto-invert white/black and surface scale */
+    --color-white: 9 9 11;
+    --color-black: 255 255 255;
+
+    --surface-50: 9 9 11;
+    --surface-100: 24 24 27;
+    --surface-200: 39 39 42;
+    --surface-300: 63 63 70;
+    --surface-400: 82 82 91;
+    --surface-500: 161 161 170;
+    --surface-600: 212 212 216;
+    --surface-700: 228 228 231;
+    --surface-800: 244 244 245;
+    --surface-900: 250 250 250;
+    --surface-950: 255 255 255;
+
+    --background: 9 9 11;
+    --foreground: 250 250 250;
+    --card: 9 9 11;
+    --card-foreground: 250 250 250;
+    --primary: 250 250 250;
+    --primary-foreground: 9 9 11;
+    --border: 39 39 42;
+    --muted: 24 24 27;
+    --muted-foreground: 161 161 170;
   }
 }
 
@@ -37,15 +78,15 @@ body {
 
 @layer components {
   .glass-card {
-    @apply bg-white border border-slate-200 rounded-xl shadow-sm transition-all duration-200;
+    @apply bg-white border border-surface-200 rounded-xl shadow-sm transition-all duration-200;
   }
 
   .glass-card:hover {
-    @apply shadow-md border-slate-300;
+    @apply shadow-md border-surface-300;
   }
 
   .premium-gradient {
-    @apply bg-slate-900 bg-clip-text text-transparent;
+    @apply bg-surface-900 bg-clip-text text-transparent;
   }
 
   .grid-pattern {

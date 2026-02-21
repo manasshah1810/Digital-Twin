@@ -17,8 +17,8 @@ export default function CompletenessValidator() {
                     <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">System Coverage</div>
                     <div className="text-4xl font-black text-white italic tracking-tighter">{coverage}%</div>
                 </div>
-                <div className="glass-card p-6 border-blue-500/20">
-                    <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">Total Req.</div>
+                <div className="glass-card p-6 border-surface-500/20">
+                    <div className="text-[10px] font-black text-surface-500 uppercase tracking-widest mb-2">Total Req.</div>
                     <div className="text-4xl font-black text-white italic tracking-tighter">{total}</div>
                 </div>
                 <div className="glass-card p-6 border-amber-500/20">
@@ -61,7 +61,7 @@ export default function CompletenessValidator() {
                                     <td className="p-4 text-[11px] font-medium text-white/60 italic">{req.implementation_feature}</td>
                                     <td className="p-4">
                                         <div className="flex items-center gap-2 group/trace cursor-help" title={req.technical_source}>
-                                            <Database className="w-3 h-3 text-white/20 group-hover/trace:text-blue-500" />
+                                            <Database className="w-3 h-3 text-white/20 group-hover/trace:text-surface-500" />
                                             <span className="text-[9px] font-mono text-white/20 group-hover/trace:text-white/60 truncate max-w-[120px]">{req.technical_source}</span>
                                         </div>
                                     </td>
