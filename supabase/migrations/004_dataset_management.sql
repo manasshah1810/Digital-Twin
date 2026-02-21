@@ -1,3 +1,0 @@
--- THIS MIGRATION (004) HAS BEEN SUPERSEDED BY 005_dataset_centric_pivot.sql
--- DO NOT RUN THIS FILE. Run 005 instead.
--- Kept for audit trail only.
