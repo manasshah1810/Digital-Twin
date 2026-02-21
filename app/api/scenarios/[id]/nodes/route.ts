@@ -12,9 +12,17 @@ export async function GET(
         .from('scenarios')
         .select('dataset_id')
         .eq('id', params.id)
-        .single()
+        .maybeSingle()
 
-    if (sErr || !scenario?.dataset_id) {
+    if (sErr) {
+        return NextResponse.json({ error: sErr.message }, { status: 500 })
+    }
+
+    if (!scenario) {
+        return NextResponse.json({ error: 'Scenario not found' }, { status: 404 })
+    }
+
+    if (!scenario.dataset_id) {
         return NextResponse.json({ error: 'Scenario not associated with a valid Bio-Grid.' }, { status: 404 })
     }
 

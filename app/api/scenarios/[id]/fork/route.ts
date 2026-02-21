@@ -15,7 +15,7 @@ export async function POST(
             .from('scenarios')
             .select('*')
             .eq('id', scenarioId)
-            .single()
+            .maybeSingle()
 
         if (fetchError || !original) throw new Error('Original scenario not found')
 

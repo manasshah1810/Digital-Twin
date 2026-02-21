@@ -1,5 +1,6 @@
 {
+  "/page": "app/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/api/datasets/route": "app/api/datasets/route.js",
-  "/dashboard/datasets/page": "app/dashboard/datasets/page.js"
+  "/api/optimize/route": "app/api/optimize/route.js",
+  "/api/scenarios/[id]/route": "app/api/scenarios/[id]/route.js"
 }

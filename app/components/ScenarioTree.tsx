@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { GitFork, ChevronRight, ChevronDown, Database, Activity } from 'lucide-react'
+import { GitFork, ChevronRight, ChevronDown, CheckCircle2, History } from 'lucide-react'
 
 interface ScenarioNode {
     id: string
@@ -85,30 +85,32 @@ export default function ScenarioTree({ currentScenarioId, onSelectScenario, onFo
         return (
             <div key={node.id} className="select-none">
                 <div
-                    className={`flex items-center gap-2 py-2 px-3 rounded-xl transition-all group cursor-pointer ${isSelected ? 'bg-red-600/20 border border-red-500/30' : 'hover:bg-white/5 border border-transparent'
+                    className={`flex items-center gap-2 py-2 px-3 rounded-lg transition-all group cursor-pointer border ${isSelected
+                        ? 'bg-blue-50 border-blue-200 shadow-sm'
+                        : 'hover:bg-slate-50 border-transparent'
                         }`}
-                    style={{ marginLeft: `${depth * 20}px` }}
+                    style={{ marginLeft: `${depth * 16}px` }}
                 >
                     <div
-                        className="w-4 h-4 flex items-center justify-center text-white/20 hover:text-white transition-colors"
+                        className="w-4 h-4 flex items-center justify-center text-slate-300 hover:text-slate-600 transition-colors"
                         onClick={(e) => {
                             e.stopPropagation()
                             toggleExpand(node.id)
                         }}
                     >
-                        {hasChildren ? (isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />) : null}
+                        {hasChildren ? (isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />) : null}
                     </div>
 
                     <div
-                        className="flex-1 flex items-center gap-3 overflow-hidden"
+                        className="flex-1 flex items-center gap-2.5 overflow-hidden"
                         onClick={() => onSelectScenario(node.id)}
                     >
                         {node.is_baseline ? (
-                            <Database className={`w-3.5 h-3.5 ${isSelected ? 'text-red-500' : 'text-blue-500'}`} />
+                            <CheckCircle2 className={`w-3.5 h-3.5 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
                         ) : (
-                            <Activity className={`w-3.5 h-3.5 ${isSelected ? 'text-red-500' : 'text-emerald-500'}`} />
+                            <History className={`w-3.5 h-3.5 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
                         )}
-                        <span className={`text-[11px] font-black uppercase tracking-tighter truncate ${isSelected ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+                        <span className={`text-[11px] font-bold uppercase tracking-tight truncate ${isSelected ? 'text-blue-900' : 'text-slate-500 group-hover:text-slate-700'
                             }`}>
                             {node.name}
                         </span>
@@ -119,8 +121,8 @@ export default function ScenarioTree({ currentScenarioId, onSelectScenario, onFo
                             e.stopPropagation()
                             onFork(node.id)
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white/10 rounded-lg transition-all text-white/40 hover:text-red-500"
-                        title="Fork Scenario"
+                        className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-md transition-all ${isSelected ? 'hover:bg-blue-100 text-blue-600' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'}`}
+                        title="Duplicate Scenario"
                     >
                         <GitFork className="w-3 h-3" />
                     </button>
@@ -131,14 +133,14 @@ export default function ScenarioTree({ currentScenarioId, onSelectScenario, onFo
         )
     }
 
-    if (loading) return <div className="animate-pulse space-y-2">
-        {[1, 2, 3].map(i => <div key={i} className="h-10 bg-white/5 rounded-xl w-full" />)}
+    if (loading) return <div className="space-y-3">
+        {[1, 2, 3].map(i => <div key={i} className="h-10 bg-slate-50 rounded-lg w-full animate-pulse" />)}
     </div>
 
     return (
         <div className="space-y-1">
-            <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-4 px-3">Scenario Lineage</h3>
             {treeData.map(node => renderNode(node))}
         </div>
     )
 }
+

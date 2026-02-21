@@ -9,43 +9,60 @@ import { getOrSetBaselineSnapshot } from '@/lib/optimization/baselineSnapshot'
 import { generateOperationalImplications } from '@/lib/explainability/operationalImplications'
 import { generateRecommendations } from '@/lib/explainability/recommendedActions'
 import { generateConfidenceBoundaries } from '@/lib/explainability/confidenceGuard'
+import { suggestInfrastructureLink } from '@/lib/explainability/suggestInfrastructureLink'
+import { diagnoseDisruption } from '@/lib/explainability/diagnoseDisruption'
+import { calculatePhysicsCost, getRegionalFuelPrice } from '@/lib/optimization/physics'
+import { getStrategicRoutingOptions } from '@/lib/optimization/strategicAI'
 
 export async function POST(request: Request) {
     const supabase = createAdminClient()
-    const { scenarioId, sourceNodeId, targetNodeId, constraints, targetRank = 1 } = await request.json()
+    const {
+        scenarioId,
+        sourceNodeId,
+        targetNodeId,
+        constraints,
+        targetRank = 1,
+        weightMode = 'balanced',
+        timeValue = 25,
+        cargo // { packageCount, packageWeight, packageVolume }
+    } = await request.json()
 
     if (!scenarioId || !sourceNodeId || !targetNodeId) {
         return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
     }
 
     try {
-        // 0. Resolve Scenario & Dataset Context
+        // 0. Resolve Context
         const { data: scenario, error: sErr } = await supabase
             .from('scenarios')
             .select('id, dataset_id')
             .eq('id', scenarioId)
-            .single()
+            .maybeSingle()
 
-        if (sErr || !scenario?.dataset_id) {
-            return NextResponse.json({
-                error: 'STRATEGIC BLOCKAGE: No active Bio-Grid (Dataset) associated with this scenario. Please upload and link an architecture first.',
-                type: 'SYSTEM_CONFIG_ERROR'
-            }, { status: 422 })
-        }
+        if (sErr) throw new Error(sErr.message)
+        if (!scenario) throw new Error('Scenario not found')
+        if (!scenario.dataset_id) throw new Error('No dataset linked to scenario')
 
-        // 1. Build Base Graph from Dataset (Ground Truth)
+        // 1. Build Base Graph 
         const baseGraph = await buildGraph(scenario.dataset_id, scenarioId)
+        const sNode = baseGraph.nodes.get(sourceNodeId)
+        const tNode = baseGraph.nodes.get(targetNodeId)
 
-        // 2. Prepare Simulation Config
+        if (!sNode || !tNode) throw new Error('Source or Target missing')
+
+        // 2. STRATEGIC AI LAYER (Top 10 Logical Paths)
+        const { data: modesData } = await supabase.from('route_edges').select('mode').eq('dataset_id', scenario.dataset_id)
+        const availableModes = Array.from(new Set(modesData?.map(m => m.mode).filter(Boolean) || []))
+        const strategicOptions = await getStrategicRoutingOptions(sNode, tNode, cargo, availableModes)
+
+        // 3. Prepare Config
         const { data: fuelIndices } = await supabase
             .from('fuel_indices')
             .select('fuel_type, price_index')
-            .eq('dataset_id', scenario.dataset_id) // Fuel indices now belong to dataset
+            .eq('dataset_id', scenario.dataset_id)
 
         const fuelMultipliers: Record<string, number> = {}
-        fuelIndices?.forEach(fi => {
-            fuelMultipliers[fi.fuel_type] = Number(fi.price_index)
-        })
+        fuelIndices?.forEach(fi => { fuelMultipliers[fi.fuel_type] = Number(fi.price_index) })
 
         const config = {
             fuelPriceMultipliers: constraints?.fuelPriceMultipliers || fuelMultipliers,
@@ -54,147 +71,201 @@ export async function POST(request: Request) {
             edgeCapacityThrottles: constraints?.edgeCapacityThrottles || {}
         }
 
-        // 3. Apply Constraints/Shocks (Tactical Layer)
-        const constrainedGraph = applyConstraints(baseGraph, config)
+        // 4. Transform AI Strategies into Calculated Results
+        const getTripsForMode = (mode: string) => {
+            if (!cargo) return 1
+            const weight = (cargo.packageCount || 0) * (cargo.packageWeight || 0)
+            if (weight === 0) return Math.ceil((cargo.packageCount || 1) / 1000)
 
-        // 4. Run Optimization (K-Shortest Paths, K=3)
-        const allResults = findKLeastCostPaths(constrainedGraph, sourceNodeId, targetNodeId, 3)
+            const m = mode.toLowerCase()
+            let cap = 20000 // default truck
+            if (m.includes('sea') || m.includes('maritim') || m.includes('vessel')) cap = 28000
+            else if (m.includes('rail') || m.includes('train')) cap = 30000
+            else if (m.includes('air') || m.includes('flight') || m.includes('plane')) cap = 5000
+            return Math.ceil(weight / cap)
+        }
 
-        if (allResults.length === 0) {
-            const sourceNeighbors = baseGraph.adjacencyList.get(sourceNodeId) || []
-            const targetInbound = Array.from(baseGraph.adjacencyList.values())
-                .flat()
-                .filter(e => e.target === targetNodeId)
+        const aiResults: any[] = strategicOptions.map((strat, sIdx) => {
+            let totalCost = 0, totalCO2 = 0, totalTime = 0
+            const steps: any[] = [{ nodeId: sourceNodeId, name: sNode.name, latitude: sNode.latitude, longitude: sNode.longitude, cost: 0 }]
+            const path: string[] = [sourceNodeId]
+            const modeBreakdown: Record<string, number> = {}
 
-            return NextResponse.json({
-                error: 'NETWORK DISCONNECTED: No feasible trajectory found. Tactical constraints have likely isolated the origin or destination from the network.',
-                type: 'REACHABILITY_ERROR',
-                diagnostics: {
-                    sourceClosed: config.closedNodeIds.includes(sourceNodeId),
-                    targetClosed: config.closedNodeIds.includes(targetNodeId),
-                    sourceDeadEnd: sourceNeighbors.length === 0,
-                    targetIsolated: targetInbound.length === 0,
-                    baseGraphStats: {
-                        nodesCount: baseGraph.nodes.size,
-                        edgesCount: Array.from(baseGraph.adjacencyList.values()).flat().length
-                    },
-                    constrainedGraphStats: {
-                        nodesCount: constrainedGraph.nodes.size,
-                        edgesCount: Array.from(constrainedGraph.adjacencyList.values()).flat().length
-                    },
-                    activeModes: Array.from(baseGraph.adjacencyList.values()).flat().map(e => e.mode).filter(m => !config.forbiddenModes.includes(m))
+            const totalLoad = (cargo?.packageCount || 0) * (cargo?.packageWeight || 0)
+            const capacities: Record<string, number> = { 'truck': 20000, 'rail': 30000, 'sea': 28000, 'air': 5000 }
+
+            for (let i = 0; i < strat.steps.length - 1; i++) {
+                const u = strat.steps[i], v = strat.steps[i + 1]
+                const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+                    const toRad = (d: number) => d * Math.PI / 180
+                    const R = 6371
+                    const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1)
+                    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+                    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
                 }
-            }, { status: 422 })
-        }
+                const dist = calculateDistance(u.latitude, u.longitude, v.latitude, v.longitude)
+                const trips = getTripsForMode(v.mode)
 
-        // Edge Case Detection: System Alerts
-        const systemAlerts = []
+                // Heuristic matching for AI modes
+                const lowMode = v.mode.toLowerCase()
+                const isSea = lowMode.includes('sea') || lowMode.includes('maritim') || lowMode.includes('vessel')
+                const isRail = lowMode.includes('rail') || lowMode.includes('train')
+                const isAir = lowMode.includes('air') || lowMode.includes('flight') || lowMode.includes('aviation')
 
-        // 1. Multiple Optima
-        if (allResults.length > 1 && allResults[0].totalCost === allResults[1].totalCost) {
-            systemAlerts.push({
-                type: 'MULTIPLE_OPTIMA',
-                severity: 'INFO',
-                message: 'Non-Unique Solution: Multiple trajectories identified with identical least-cost metrics. Load balancing is theoretically possible.'
-            })
-        }
+                const cap = isSea ? 28000 : (isRail ? 30000 : (isAir ? 5000 : 20000))
+                const tripWeight = trips > 0 ? totalLoad / trips : 0
 
-        // 2. Extreme Shock
-        const fuelMultipliers_vals = Object.values(config.fuelPriceMultipliers) as number[]
-        const maxFuelMultiplier = fuelMultipliers_vals.length > 0 ? Math.max(...fuelMultipliers_vals) : 1
-        if (maxFuelMultiplier > 5) {
-            systemAlerts.push({
-                type: 'HYPER_SHOCK',
-                severity: 'CRITICAL',
-                message: `Extreme Volatility: Fuel multiplier (${maxFuelMultiplier.toFixed(1)}x) exceeds standard volatility bounds (>5.0x).`
-            })
-        }
+                const phys = calculatePhysicsCost(dist, v.mode, sNode.metadata?.country, tripWeight, cap)
+                const cost = phys.total * trips
+                totalCost += cost
 
-        // Select the path based on requested rank (clamped to available results)
-        const selectedIndex = Math.min(Math.max(0, targetRank - 1), allResults.length - 1);
-        const result = allResults[selectedIndex]
+                const baseCO2 = isSea ? 0.015 : (isRail ? 0.04 : (isAir ? 0.8 : 0.12))
+                totalCO2 += dist * baseCO2 * trips * (1 + (tripWeight / cap) * 0.2)
 
-        // 5. Build/Retrieve Baseline Snapshot for Comparison (Dataset-scoped)
-        const baselineSnapshot = await getOrSetBaselineSnapshot(scenario.dataset_id, sourceNodeId, targetNodeId)
-        const baselineResult = baselineSnapshot?.result
+                const speed = isSea ? 25 : (isRail ? 45 : (isAir ? 800 : 60))
+                totalTime += dist / speed
+                modeBreakdown[v.mode] = (modeBreakdown[v.mode] || 0) + cost
 
-        // 6. Compute Deltas
-        const baselineCost = baselineResult?.totalCost || result.totalCost
-        const absDelta = result.totalCost - baselineCost
-        const relDelta = baselineCost !== 0 ? (absDelta / baselineCost) * 100 : 0
+                // Snap the last step to targetNodeId
+                const isLast = i === strat.steps.length - 2
+                const vid = isLast ? targetNodeId : `AI_${sIdx}_${i}`
 
-        const technicalExplanation = explainRouteChange(baselineResult || result, result, config)
+                path.push(vid)
+                steps.push({
+                    nodeId: vid,
+                    name: isLast ? tNode.name : v.haltName,
+                    latitude: isLast ? tNode.latitude : v.latitude,
+                    longitude: isLast ? tNode.longitude : v.longitude,
+                    mode: v.mode,
+                    cost,
+                    isNautical: isSea,
+                    instruction: v.instruction
+                })
+            }
+            return { strategyName: strat.strategyName, generativeReason: strat.description, path, totalCost, totalCO2, totalTransitTime: totalTime, steps, modeBreakdown, isStrategicAI: true, isGenerative: true }
+        })
 
-        // 6.5 Resolve Human Readable Path Data for all alternatives
-        const processedResults = allResults.map((r: OptimizationResult, index: number) => {
-            const pDetails = r.path.map((id: string) => {
-                const node = baseGraph.nodes.get(id);
-                return {
-                    id: id,
-                    name: node?.name || 'Unknown Terminal',
-                    type: node?.type || 'N/A',
-                    latitude: node?.latitude,
-                    longitude: node?.longitude
-                };
-            });
+        // 5. Run Technical Optimization
+        let constrainedGraph = applyConstraints(baseGraph, config)
+        let dijkstraResults = findKLeastCostPaths(constrainedGraph, sourceNodeId, targetNodeId, 3, weightMode, timeValue, cargo)
+
+        // Merge & Sort
+        let allResults = [...aiResults, ...dijkstraResults]
+        allResults.sort((a, b) => {
+            if (weightMode === 'time') return a.totalTransitTime - b.totalTransitTime
+            if (weightMode === 'co2') return a.totalCO2 - b.totalCO2
+            return (a.totalCost + a.totalTransitTime * timeValue) - (b.totalCost + b.totalTransitTime * timeValue)
+        })
+
+        if (allResults.length === 0) throw new Error('No path found')
+
+        // Process final high-fidelity results
+        const processedResults = allResults.map((res: any, index: number) => {
+            let pathDetails: any[]
+
+            if (res.isStrategicAI && res.steps) {
+                // AI results: steps already contain full coordinate data — use directly
+                pathDetails = res.steps.map((step: any) => ({
+                    id: step.nodeId,
+                    name: step.name || 'AI Waypoint',
+                    type: step.mode?.toUpperCase() || 'HUB',
+                    latitude: step.latitude,
+                    longitude: step.longitude,
+                    mode: step.mode,
+                    isNautical: step.isNautical || false,
+                    metadata: { instruction: step.instruction }
+                }))
+            } else {
+                // Dijkstra results: resolve from graph
+                const resultPath = res.path || []
+                pathDetails = resultPath.map((nodeId: string, idx: number) => {
+                    const node = baseGraph.nodes.get(nodeId)
+                    let detail: any = {
+                        id: nodeId,
+                        name: node?.name || 'Wait-point',
+                        type: node?.type || 'HUB',
+                        latitude: node?.latitude,
+                        longitude: node?.longitude,
+                        metadata: node?.metadata || {}
+                    }
+
+                    if (idx > 0) {
+                        const prevNodeId = resultPath[idx - 1]
+                        const edge = constrainedGraph.adjacencyList.get(prevNodeId)?.find(e => e.target === nodeId)
+                        if (edge) {
+                            detail.mode = edge.mode
+                            const lowMode = (edge.mode || '').toLowerCase()
+                            detail.isNautical = lowMode.includes('sea') || lowMode.includes('maritim') || lowMode.includes('vessel')
+                        }
+                    }
+                    return detail
+                })
+            }
+
+            // Ensure every result has a cost breakdown
+            if (!res.costBreakdown && res.path.length > 1 && !res.isStrategicAI) {
+                const breakdown = { fuel: 0, maintenance: 0, fees: 0, distanceKm: 0, fuelPriceUsed: 0, efficiencyUsed: 0 }
+                for (let i = 0; i < res.path.length - 1; i++) {
+                    const u = res.path[i], v = res.path[i + 1]
+                    const edge = constrainedGraph.adjacencyList.get(u)?.find(e => e.target === v)
+                    if (edge?.metadata?.costBreakdown) {
+                        const b = edge.metadata.costBreakdown
+                        breakdown.fuel += b.fuel; breakdown.maintenance += b.maintenance; breakdown.fees += b.fees; breakdown.distanceKm += b.distanceKm
+                    }
+                }
+                res.costBreakdown = breakdown
+            }
 
             return {
                 rank: index + 1,
-                ...r,
-                pathDetails: pDetails,
-                readablePath: pDetails.map((n: any) => `${n.name} [${n.type.toUpperCase()}]`)
-            };
-        });
+                ...res,
+                pathDetails,
+                readablePath: pathDetails.map((n: any) => `${n.name} [${n.type.toUpperCase()}]`),
+                sourceNodeId,
+                targetNodeId
+            }
+        })
 
-        const primaryProcessed = processedResults[selectedIndex];
+        const selectedIndex = Math.min(Math.max(0, targetRank - 1), processedResults.length - 1);
+        const result = processedResults[selectedIndex]
 
-        // 6.75 Bottleneck Detection (on selected path)
-        const bottlenecks: any[] = [];
+        const systemAlerts = []
+        if (result.isStrategicAI) {
+            systemAlerts.push({
+                type: 'AI_STRATEGIC_PLAN',
+                severity: 'INFO',
+                message: `Master Planner: This route follows the '${result.strategyName}' strategy. AI logically identified multimodal hubs to prevent infrastructure gaps.`
+            })
+        }
+        if (!cargo?.packageCount) {
+            systemAlerts.push({ type: 'DATA_GAP', severity: 'WARNING', message: 'Cargo Volume Missing: Using single-unit estimates.' })
+        }
+
+        // Snapshots & Metrics
+        const baselineSnapshot = await getOrSetBaselineSnapshot(scenario.dataset_id, sourceNodeId, targetNodeId)
+        const baselineResult = baselineSnapshot?.result
+        const baselineCost = baselineResult?.totalCost || result.totalCost
+        const absDelta = result.totalCost - baselineCost
+        const relDelta = baselineCost !== 0 ? (absDelta / baselineCost) * 100 : 0
+        const baselineCO2 = baselineResult?.totalCO2 || result.totalCO2
+        const co2Delta = result.totalCO2 - baselineCO2
+        const co2RelDelta = baselineCO2 !== 0 ? (co2Delta / baselineCO2) * 100 : 0
+        const baselineTime = baselineResult?.totalTransitTime || result.totalTransitTime
+        const timeDelta = result.totalTransitTime - baselineTime
+        const timeRelDelta = baselineTime !== 0 ? (timeDelta / baselineTime) * 100 : 0
+
+        const technicalExplanation = explainRouteChange(baselineResult || result, result, config)
+
+        const bottlenecks: any[] = []
         result.steps.forEach((step: any, i: number) => {
-            if (i === 0) return; // Skip origin
-            const baselineStep = baselineResult?.steps.find((s: any) => s.nodeId === step.nodeId);
-            const marginalIncrease = baselineStep ? step.cost - baselineStep.cost : 0;
-
-            const node = baseGraph.nodes.get(step.nodeId);
-            const metadata = node?.metadata || {};
-            const capacity = metadata.capacity || 0;
-            const currentLoad = metadata.currentLoad || 0;
-            const utilization = capacity > 0 ? (currentLoad / capacity) * 100 : 0;
-
-            if (marginalIncrease > 0) {
-                bottlenecks.push({
-                    type: 'EDGE_COST_SPIKE',
-                    nodeId: step.nodeId,
-                    entity: `${primaryProcessed.pathDetails[i - 1].name} -> ${primaryProcessed.pathDetails[i].name}`,
-                    severity: marginalIncrease > (baselineStep?.cost || 1) ? 'CRITICAL' : 'WARNING',
-                    impact: `+$${marginalIncrease.toLocaleString()} marginal cost increase`,
-                    marginalCost: marginalIncrease
-                });
+            if (i === 0) return
+            const node = baseGraph.nodes.get(step.nodeId)
+            const metadata = node?.metadata || {}
+            if (metadata.currentLoad / metadata.capacity > 0.95) {
+                bottlenecks.push({ type: 'CAPACITY_STRESS', entity: node?.name, severity: 'CRITICAL', impact: 'Terminal congestion' })
             }
+        })
 
-            if (utilization > 85) {
-                bottlenecks.push({
-                    type: 'CAPACITY_STRESS',
-                    nodeId: step.nodeId,
-                    entity: node?.name,
-                    severity: utilization > 95 ? 'CRITICAL' : 'WARNING',
-                    impact: `Terminal utilization at ${utilization.toFixed(1)}%`,
-                    utilization: utilization
-                });
-            }
-
-            if (config.closedNodeIds.includes(step.nodeId)) {
-                bottlenecks.push({
-                    type: 'NODE_TERMINATION',
-                    nodeId: step.nodeId,
-                    entity: node?.name,
-                    severity: 'CRITICAL',
-                    impact: 'Operational failure: Traffic rerouted through higher-cost path'
-                });
-            }
-        });
-
-        // 7. Generate LLM Explanation via OpenRouter
         const llmResult = await generateExplanation(
             { path: baselineResult?.path || [], totalCost: baselineCost },
             { path: result.path, totalCost: result.totalCost },
@@ -202,29 +273,10 @@ export async function POST(request: Request) {
             config
         )
 
-        // 7.5 Generate Operational Implications
-        const implications = await generateOperationalImplications({
-            deltas: { absolute: absDelta, percentage: relDelta },
-            bottlenecks,
-            modeBreakdown: result.modeBreakdown
-        })
+        const implications = await generateOperationalImplications({ deltas: { absolute: absDelta, percentage: relDelta }, bottlenecks, modeBreakdown: result.modeBreakdown })
+        const recommendations = await generateRecommendations({ deltas: { absolute: absDelta, percentage: relDelta }, bottlenecks, modeBreakdown: result.modeBreakdown })
+        const confidence = await generateConfidenceBoundaries({ scenarioId, sourceNodeId, targetNodeId, constraints: config })
 
-        // 7.75 Generate Strategic Recommendations
-        const recommendations = await generateRecommendations({
-            deltas: { absolute: absDelta, percentage: relDelta },
-            bottlenecks,
-            modeBreakdown: result.modeBreakdown
-        })
-
-        // 7.85 Generate Confidence & Limitations
-        const confidence = await generateConfidenceBoundaries({
-            scenarioId,
-            sourceNodeId,
-            targetNodeId,
-            constraints: config
-        })
-
-        // 8. Persist Optimization Results with Ranked Alternatives
         const { data: savedResult, error: saveError } = await supabase
             .from('optimization_results')
             .insert([{
@@ -232,53 +284,21 @@ export async function POST(request: Request) {
                 total_cost: result.totalCost,
                 run_status: 'completed',
                 result_data: {
-                    ...primaryProcessed,
+                    ...result,
                     alternatives: processedResults.filter((_, idx) => idx !== selectedIndex),
                     constraintsApplied: config,
-                    technicalExplanation: technicalExplanation,
-                    bottlenecks: bottlenecks,
-                    operationalImplications: implications,
-                    recommendedActions: recommendations,
-                    confidenceBoundaries: confidence,
-                    deltas: {
-                        absoluteCost: absDelta,
-                        percentChange: relDelta,
-                        baselineSnapshotId: baselineResult ? (baselineResult as any).id : null
-                    }
+                    technicalExplanation, bottlenecks, operationalImplications: implications, recommendedActions: recommendations, confidenceBoundaries: confidence,
+                    deltas: { absoluteCost: absDelta, percentChange: relDelta, co2Delta, co2PercentChange: co2RelDelta, timeDelta, timePercentChange: timeRelDelta }
                 }
             }])
-            .select()
-            .single()
+            .select().single()
 
-        if (saveError) throw saveError
-
-        // 9. Persist Decision Trace (LLM Explanation)
-        const { error: traceError } = await supabase
-            .from('decision_traces')
-            .insert([{
-                optimization_result_id: savedResult.id,
-                scenario_id: scenarioId,
-                step_number: 1,
-                decision_type: 'ROUTE_SHOCK_RECALCULATION',
-                rationale: llmResult.summary,
-                impact_metrics: {
-                    tradeoffs: llmResult.tradeoffs,
-                    costDelta: absDelta,
-                    percentChange: relDelta,
-                    baselinePath: baselineResult?.path,
-                    optimizedPath: result.path,
-                    alternativesCount: allResults.length
-                }
-            }])
-
-        if (traceError) console.error('Failed to save decision trace:', traceError)
-
-        // Resolve human-readable baseline for map comparison
+        // Resolve human-readable baseline for map comparison (Detailed objects)
         const baselinePathDetails = baselineResult?.path.map((id: string) => {
             const node = baseGraph.nodes.get(id);
             return {
-                id: id,
-                name: node?.name || 'Unknown Terminal',
+                id,
+                name: node?.name || 'Unknown',
                 type: node?.type || 'N/A',
                 latitude: node?.latitude,
                 longitude: node?.longitude
@@ -288,30 +308,27 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             resultId: savedResult.id,
-            ...primaryProcessed,
+            ...result,
             alternatives: processedResults.filter((_, idx) => idx !== selectedIndex),
-            baselinePath: baselinePathDetails,
-            baselineMetadata: baselineSnapshot?.metadata,
+            baselinePath: baselinePathDetails, // Now full objects
             constraints: config,
-            bottlenecks: bottlenecks,
-            systemAlerts: systemAlerts,
-            implications: implications,
-            recommendations: recommendations,
-            confidence: confidence,
-            deltas: {
-                absolute: absDelta,
-                percentage: relDelta
-            },
-            explanation: {
-                summary: llmResult.summary,
-                tradeoffs: llmResult.tradeoffs,
-                technical: technicalExplanation.reason,
-                isDegraded: (llmResult as any).isDegraded || false
-            }
+            bottlenecks,
+            systemAlerts,
+            implications,
+            recommendations,
+            confidence,
+            deltas: { absolute: absDelta, percentage: relDelta, co2: co2Delta, co2Percentage: co2RelDelta, time: timeDelta, timePercentage: timeRelDelta },
+            explanation: { summary: llmResult.summary, tradeoffs: llmResult.tradeoffs, technical: technicalExplanation.reason }
         })
 
     } catch (error: any) {
         console.error('Optimization error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({
+            error: error.message,
+            success: false,
+            diagnostics: {
+                message: "A fundamental topology gap was detected. Check if your dataset contains links between these continents or hubs."
+            }
+        }, { status: 500 })
     }
 }

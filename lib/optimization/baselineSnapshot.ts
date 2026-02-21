@@ -32,6 +32,8 @@ export async function getOrSetBaselineSnapshot(
             result: {
                 path: existing.route_data.path,
                 totalCost: Number(existing.total_cost),
+                totalCO2: existing.route_data.totalCO2 || 0,
+                totalTransitTime: existing.route_data.totalTransitTime || 0,
                 modeBreakdown: existing.route_data.modeBreakdown,
                 steps: existing.route_data.steps
             },
@@ -59,6 +61,8 @@ export async function getOrSetBaselineSnapshot(
             total_cost: result.totalCost,
             route_data: {
                 path: result.path,
+                totalCO2: result.totalCO2,
+                totalTransitTime: result.totalTransitTime,
                 modeBreakdown: result.modeBreakdown,
                 steps: result.steps
             }

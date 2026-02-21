@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import ScenarioEditor from '@/app/dashboard/ScenarioEditor'
 import Link from 'next/link'
-import { Database } from 'lucide-react'
+import { Database, Plus, RefreshCcw } from 'lucide-react'
 
 export default function ScenarioList() {
     const [scenarios, setScenarios] = useState<any[]>([])
@@ -47,7 +47,7 @@ export default function ScenarioList() {
             const res = await fetch('/api/scenarios', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, description: 'User-defined tactical branch', dataset_id: activeDatasetId })
+                body: JSON.stringify({ name, description: 'Tactical simulation branch', dataset_id: activeDatasetId })
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error)
@@ -59,75 +59,57 @@ export default function ScenarioList() {
         }
     }
 
-    if (loading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-white/20">Decrypting Logistics Fabric...</div>
+    useEffect(() => {
+        if (!selectedId && scenarios.length > 0) {
+            // Auto-select baseline or first scenario
+            const baseline = scenarios.find(s => s.is_baseline)
+            setSelectedId(baseline ? baseline.id : scenarios[0].id)
+        }
+    }, [scenarios, selectedId])
+
+    if (loading) return (
+        <div className="h-64 flex flex-col items-center justify-center gap-4 text-slate-400">
+            <RefreshCcw className="w-6 h-6 animate-spin" />
+            <span className="text-xs font-bold uppercase tracking-widest">Synchronizing Network State...</span>
+        </div>
+    )
 
     if (!activeDatasetId) {
         return (
-            <div className="glass-card p-32 flex flex-col items-center justify-center text-center">
-                <div className="h-16 w-16 rounded-2xl bg-red-600/10 flex items-center justify-center mb-6 border border-red-500/20">
-                    <Database className="w-8 h-8 text-red-500 animate-pulse" />
+            <div className="bg-white border border-slate-200 rounded-3xl p-32 flex flex-col items-center justify-center text-center shadow-sm">
+                <div className="h-20 w-20 rounded-2xl bg-slate-50 flex items-center justify-center mb-8 border border-slate-100 shadow-inner">
+                    <Database className="w-10 h-10 text-slate-300" />
                 </div>
-                <h3 className="text-2xl font-black italic premium-gradient uppercase mb-2 text-white">No Bio-Grid Detected</h3>
-                <p className="text-white/40 max-w-sm text-sm mb-8 font-medium">To run simulations, you must first ingest a logistics architecture. The system requires nodes, edges, pricing, and fuel schemas.</p>
-                <Link href="/dashboard/datasets" className="px-8 py-4 bg-white text-black rounded-xl font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95">
-                    Enter Ingestion Protocol
+                <h3 className="text-2xl font-black mb-4 text-slate-900 tracking-tight uppercase">Control Center Offline</h3>
+                <p className="text-slate-500 max-w-sm text-sm mb-10 leading-relaxed font-bold uppercase tracking-widest opacity-60">Authorize a logistics dataset to initialize simulation capabilities.</p>
+                <Link href="/dashboard/datasets" className="px-10 py-4 bg-slate-900 text-white rounded-xl font-black uppercase tracking-[0.2em] text-xs hover:bg-black transition-all shadow-xl shadow-slate-200">
+                    Connect Dataset
                 </Link>
             </div>
         )
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-1 border-r border-white/5 pr-6 space-y-6">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Active Scenarios</h2>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={handleCreate}
-                            className="text-[9px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors"
-                        >
-                            + New Scenario
-                        </button>
-                        <Link href="/dashboard/datasets" className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">
-                            Switch Grid
-                        </Link>
-                    </div>
+        <div className="w-full">
+            {selectedId ? (
+                <ScenarioEditor
+                    scenarioId={selectedId}
+                    key={selectedId}
+                    onSelectScenario={(id) => setSelectedId(id)}
+                />
+            ) : scenarios.length === 0 ? (
+                <div className="bg-white border border-slate-200 rounded-3xl p-32 flex flex-col items-center justify-center text-center shadow-sm">
+                    <div className="h-20 w-20 rounded-2xl bg-slate-50 flex items-center justify-center mb-8 border border-slate-100 italic font-black text-slate-300">?</div>
+                    <h3 className="text-xl font-black mb-4 text-slate-900 uppercase">No Tactical Branches</h3>
+                    <p className="text-slate-500 max-w-sm text-[10px] mb-10 leading-relaxed font-black uppercase tracking-widest opacity-60">This dataset has no active scenarios. Create a baseline to start.</p>
+                    <button onClick={handleCreate} className="px-8 py-3 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px]">Initialize Baseline</button>
                 </div>
-                <div className="flex flex-col gap-3">
-                    {scenarios.map((s) => (
-                        <button
-                            key={s.id}
-                            onClick={() => setSelectedId(s.id)}
-                            className={`text-left p-4 rounded-xl transition-all duration-300 group ${selectedId === s.id
-                                ? 'bg-red-600 text-white shadow-xl shadow-red-600/20 translate-x-1'
-                                : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
-                                }`}
-                        >
-                            <div className="font-bold tracking-tight">{s.name}</div>
-                            <span className="text-[9px] uppercase font-black tracking-widest opacity-50 mt-1 block group-hover:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis">
-                                {s.is_baseline ? 'System Baseline' : 'Tactical Branch'}
-                            </span>
-                        </button>
-                    ))}
-                    {scenarios.length === 0 && (
-                        <p className="text-[10px] text-white/20 italic p-4 border border-dashed border-white/5 rounded-xl">No scenarios found for this Bio-Grid.</p>
-                    )}
+            ) : (
+                <div className="h-64 flex items-center justify-center text-slate-300 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">
+                    Routing...
                 </div>
-            </div>
-
-            <div className="lg:col-span-3">
-                {selectedId ? (
-                    <ScenarioEditor scenarioId={selectedId} key={selectedId} />
-                ) : (
-                    <div className="glass-card p-32 flex flex-col items-center justify-center text-center">
-                        <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6 border border-white/10">
-                            <div className="h-4 w-4 rounded-full bg-red-600 animate-pulse" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-2 uppercase italic premium-gradient">Initialize Simulation</h3>
-                        <p className="text-white/40 max-w-xs text-sm font-medium">Select a tactical branch from the left panel to begin stress-testing logistics resilience for the active architecture.</p>
-                    </div>
-                )}
-            </div>
+            )}
         </div>
     )
 }
+

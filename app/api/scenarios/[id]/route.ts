@@ -11,9 +11,10 @@ export async function GET(
         .from('scenarios')
         .select('*')
         .eq('id', params.id)
-        .single()
+        .maybeSingle()
 
-    if (scenarioError) return NextResponse.json({ error: scenarioError.message }, { status: 404 })
+    if (scenarioError) return NextResponse.json({ error: scenarioError.message }, { status: 500 })
+    if (!scenario) return NextResponse.json({ error: 'Scenario not found' }, { status: 404 })
 
     // Fetch latest optimization result for this scenario
     const { data: latestResult } = await supabase
@@ -22,7 +23,7 @@ export async function GET(
         .eq('scenario_id', params.id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
     return NextResponse.json({
         ...scenario,
@@ -36,24 +37,31 @@ export async function PATCH(
 ) {
     const supabase = createAdminClient()
 
-    const { data: currentScenario } = await supabase
+    const { data: currentScenario, error: fetchError } = await supabase
         .from('scenarios')
         .select('is_baseline')
         .eq('id', params.id)
-        .single()
+        .maybeSingle()
 
-    if (currentScenario?.is_baseline) {
+    if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
+    if (!currentScenario) return NextResponse.json({ error: 'Scenario not found' }, { status: 404 })
+
+    if (currentScenario.is_baseline) {
         return NextResponse.json({ error: 'Cannot edit baseline scenario' }, { status: 403 })
     }
 
     const body = await request.json()
+    const updateData: any = {
+        updated_at: new Date().toISOString()
+    }
+    if (body.name !== undefined) updateData.name = body.name
+    if (body.description !== undefined) updateData.description = body.description
+    if (body.parameter_deltas !== undefined) updateData.parameter_deltas = body.parameter_deltas
+    if (body.dataset_id !== undefined) updateData.dataset_id = body.dataset_id
+
     const { data, error } = await supabase
         .from('scenarios')
-        .update({
-            name: body.name,
-            description: body.description,
-            updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', params.id)
         .select()
         .single()
@@ -68,13 +76,16 @@ export async function DELETE(
 ) {
     const supabase = createAdminClient()
 
-    const { data: currentScenario } = await supabase
+    const { data: currentScenario, error: fetchError } = await supabase
         .from('scenarios')
         .select('is_baseline')
         .eq('id', params.id)
-        .single()
+        .maybeSingle()
 
-    if (currentScenario?.is_baseline) {
+    if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
+    if (!currentScenario) return NextResponse.json({ error: 'Scenario not found' }, { status: 404 })
+
+    if (currentScenario.is_baseline) {
         return NextResponse.json({ error: 'Cannot delete baseline scenario' }, { status: 403 })
     }
 
