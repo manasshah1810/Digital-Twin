@@ -25,8 +25,20 @@ export async function GET(
         .limit(1)
         .maybeSingle()
 
+    // Also fetch dataset info to check if AI-generated
+    let datasetUploadType = null
+    if (scenario.dataset_id) {
+        const { data: dataset } = await supabase
+            .from('datasets')
+            .select('upload_type')
+            .eq('id', scenario.dataset_id)
+            .maybeSingle()
+        datasetUploadType = dataset?.upload_type || null
+    }
+
     return NextResponse.json({
         ...scenario,
+        dataset_upload_type: datasetUploadType,
         latestResult: latestResult || null
     })
 }

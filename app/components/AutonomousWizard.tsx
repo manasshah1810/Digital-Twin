@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Search, Sparkles, Navigation, ArrowRight, Bot, Target, ShieldCheck, ChevronRight, RefreshCw } from 'lucide-react'
+import { Search, Navigation, ArrowRight, Target, ShieldCheck, ChevronRight, RefreshCw } from 'lucide-react'
 
 interface Node {
     id: string
@@ -41,8 +41,9 @@ export default function AutonomousWizard({ nodes, onRun, isOptimizing }: WizardP
             sourceNodeId: selectedSource.id,
             targetNodeId: selectedTarget.id,
             fuelMultiplier: priority === 'cost' ? 1.0 : (priority === 'speed' ? 1.2 : 1.0),
-            forbiddenModes: priority === 'co2' ? ['truck'] : [], // High-level AI decision
+            forbiddenModes: priority === 'co2' ? ['truck'] : [],
             weightMode,
+            skipAI: true,
             mode: 'single'
         }
         onRun(config)
@@ -52,28 +53,28 @@ export default function AutonomousWizard({ nodes, onRun, isOptimizing }: WizardP
         <div className="max-w-4xl mx-auto py-12 px-6">
             <div className="text-center mb-12">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
-                    <Sparkles className="w-3 h-3" />
-                    AI-Driven Autonomous Navigator
+                    <Navigation className="w-3 h-3" />
+                    Route Finder
                 </div>
                 <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-4">
                     Where is your <span className="text-blue-600">Cargo</span> heading?
                 </h2>
                 <p className="text-slate-500 font-medium max-w-lg mx-auto">
-                    Enter your logistics terminals. Our AI will synthesize optimal trajectories across the global Bio-Grid.
+                    Pick your origin and destination. We'll find the best routes from your dataset.
                 </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                 {/* Source Selection */}
                 <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Origin Terminal</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">From</label>
                     <div className="relative group">
                         <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors ${selectedSource ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                             <Navigation className="w-4 h-4" />
                         </div>
                         <input
                             type="text"
-                            placeholder="Identify Origin..."
+                            placeholder="Search origin..."
                             value={selectedSource ? selectedSource.name : sourceSearch}
                             onChange={(e) => {
                                 setSourceSearch(e.target.value)
@@ -103,14 +104,14 @@ export default function AutonomousWizard({ nodes, onRun, isOptimizing }: WizardP
 
                 {/* Target Selection */}
                 <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Destination Terminal</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">To</label>
                     <div className="relative group">
                         <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-colors ${selectedTarget ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                             <Target className="w-4 h-4" />
                         </div>
                         <input
                             type="text"
-                            placeholder="Identify Destination..."
+                            placeholder="Search destination..."
                             value={selectedTarget ? selectedTarget.name : targetSearch}
                             onChange={(e) => {
                                 setTargetSearch(e.target.value)
@@ -144,21 +145,21 @@ export default function AutonomousWizard({ nodes, onRun, isOptimizing }: WizardP
                 <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
                     <div className="flex items-center gap-3 mb-8 px-4">
                         <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Guided Strategy Tuning</h3>
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Priority</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                         {[
-                            { id: 'cost', label: 'Lowest Overall Cost', desc: 'Prioritize financial efficiency across all carrier tiers.' },
-                            { id: 'co2', label: 'Minimum CO2 Impact', desc: 'Favor low-emission modes like Rail and Sea.' },
-                            { id: 'speed', label: 'Maximum Velocity', desc: 'Shortest transit windows with premium handling.' }
+                            { id: 'cost', label: 'Lowest Cost', desc: 'Find the cheapest route available.' },
+                            { id: 'co2', label: 'Low Emissions', desc: 'Prefer rail and sea over road.' },
+                            { id: 'speed', label: 'Fastest', desc: 'Shortest travel time, air if available.' }
                         ].map(p => (
                             <button
                                 key={p.id}
                                 onClick={() => setPriority(p.id as any)}
                                 className={`p-8 rounded-3xl border-2 text-left transition-all ${priority === p.id ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20' : 'bg-white border-slate-100 text-slate-900 hover:border-slate-300'}`}
                             >
-                                <div className={`text-[10px] font-black uppercase tracking-widest mb-3 ${priority === p.id ? 'text-blue-100' : 'text-blue-600'}`}>Tier: {p.id.toUpperCase()}</div>
+                                <div className={`text-[10px] font-black uppercase tracking-widest mb-3 ${priority === p.id ? 'text-blue-100' : 'text-blue-600'}`}>{p.id.toUpperCase()}</div>
                                 <div className="text-lg font-black tracking-tight mb-2">{p.label}</div>
                                 <p className={`text-[11px] font-medium leading-relaxed ${priority === p.id ? 'text-blue-100/80' : 'text-slate-500'}`}>{p.desc}</p>
                             </button>
@@ -174,8 +175,8 @@ export default function AutonomousWizard({ nodes, onRun, isOptimizing }: WizardP
                             <RefreshCw className="w-5 h-5 animate-spin" />
                         ) : (
                             <>
-                                <Bot className="w-5 h-5 text-blue-400" />
-                                Authorize AI Optimization
+                                <Navigation className="w-5 h-5 text-blue-400" />
+                                Find Route
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                             </>
                         )}
@@ -186,10 +187,10 @@ export default function AutonomousWizard({ nodes, onRun, isOptimizing }: WizardP
             <div className="mt-24 pt-12 border-t border-slate-100 flex flex-col items-center">
                 <div className="flex items-center gap-3 mb-4">
                     <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enterprise Compliance Active</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dataset Verified</span>
                 </div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase text-center max-w-md tracking-widest leading-loose">
-                    This navigator uses real-world geographic constraints and deterministic cost matrices. No private data is shared external to the Bio-Grid.
+                    Routes are calculated from your uploaded CSV data. AI is only used for generating the summary text.
                 </p>
             </div>
         </div>

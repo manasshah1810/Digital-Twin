@@ -24,6 +24,7 @@ export async function POST(request: Request) {
         targetRank = 1,
         weightMode = 'balanced',
         timeValue = 25,
+        skipAI = false,
         cargo // { packageCount, packageWeight, packageVolume }
     } = await request.json()
 
@@ -50,10 +51,13 @@ export async function POST(request: Request) {
 
         if (!sNode || !tNode) throw new Error('Source or Target missing')
 
-        // 2. STRATEGIC AI LAYER (Top 10 Logical Paths)
-        const { data: modesData } = await supabase.from('route_edges').select('mode').eq('dataset_id', scenario.dataset_id)
-        const availableModes = Array.from(new Set(modesData?.map(m => m.mode).filter(Boolean) || []))
-        const strategicOptions = await getStrategicRoutingOptions(sNode, tNode, cargo, availableModes)
+        // 2. STRATEGIC AI LAYER (skip if Normal Mode)
+        let strategicOptions: any[] = []
+        if (!skipAI) {
+            const { data: modesData } = await supabase.from('route_edges').select('mode').eq('dataset_id', scenario.dataset_id)
+            const availableModes = Array.from(new Set(modesData?.map(m => m.mode).filter(Boolean) || []))
+            strategicOptions = await getStrategicRoutingOptions(sNode, tNode, cargo, availableModes)
+        }
 
         // 3. Prepare Config
         const { data: fuelIndices } = await supabase

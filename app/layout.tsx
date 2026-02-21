@@ -32,6 +32,7 @@ export default function RootLayout({
                                 <a href="/dashboard" className="transition-all hover:text-blue-600">Operations</a>
                                 <a href="/dashboard/datasets" className="transition-all hover:text-blue-600">Assets</a>
                                 <a href="/dashboard/reports" className="transition-all hover:text-blue-600">Analytics</a>
+                                <a href="/ai-advisor" className="transition-all hover:text-amber-600 text-amber-500">AI Advisor</a>
                             </nav>
 
                             <div className="flex items-center gap-6">
