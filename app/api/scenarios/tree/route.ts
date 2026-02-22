@@ -7,7 +7,7 @@ export async function GET() {
     try {
         const { data: scenarios, error } = await supabase
             .from('scenarios')
-            .select('id, name, parent_scenario_id, is_baseline, created_at')
+            .select('id, name, parent_scenario_id, is_baseline, created_at, dataset_id')
             .order('created_at', { ascending: true })
 
         if (error) throw error

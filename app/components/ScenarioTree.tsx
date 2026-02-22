@@ -9,6 +9,7 @@ interface ScenarioNode {
     parent_scenario_id: string | null
     is_baseline: boolean
     created_at: string
+    dataset_id: string | null
     children: ScenarioNode[]
 }
 
@@ -32,15 +33,23 @@ export default function ScenarioTree({ currentScenarioId, onSelectScenario, onFo
             const res = await fetch('/api/scenarios/tree')
             const data = await res.json()
 
-            // Build tree hierarchy
+            // First find current scenario to get dataset context
+            const currentScenario = data.find((s: any) => s.id === currentScenarioId)
+            const activeDatasetId = currentScenario?.dataset_id
+
+            // Build tree hierarchy (only for scenarios in the same dataset)
             const map: Record<string, ScenarioNode> = {}
             const roots: ScenarioNode[] = []
 
-            data.forEach((s: any) => {
+            const filteredData = activeDatasetId
+                ? data.filter((s: any) => s.dataset_id === activeDatasetId)
+                : data
+
+            filteredData.forEach((s: any) => {
                 map[s.id] = { ...s, children: [] }
             })
 
-            data.forEach((s: any) => {
+            filteredData.forEach((s: any) => {
                 if (s.parent_scenario_id && map[s.parent_scenario_id]) {
                     map[s.parent_scenario_id].children.push(map[s.id])
                 } else {
