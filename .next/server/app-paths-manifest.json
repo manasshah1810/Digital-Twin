@@ -1,10 +1,4 @@
 {
-  "/dashboard/page": "app/dashboard/page.js",
-  "/api/scenarios/route": "app/api/scenarios/route.js",
-  "/api/scenarios/tree/route": "app/api/scenarios/tree/route.js",
   "/page": "app/page.js",
-  "/api/scenarios/[id]/nodes/route": "app/api/scenarios/[id]/nodes/route.js",
-  "/api/scenarios/[id]/route": "app/api/scenarios/[id]/route.js",
-  "/api/scenarios/[id]/modes/route": "app/api/scenarios/[id]/modes/route.js",
-  "/api/optimize/route": "app/api/optimize/route.js"
+  "/glossary/page": "app/glossary/page.js"
 }
