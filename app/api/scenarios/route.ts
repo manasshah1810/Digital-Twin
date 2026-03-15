@@ -1,8 +1,11 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-    const supabase = createAdminClient()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data, error } = await supabase
         .from('scenarios')
@@ -14,7 +17,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-    const supabase = createAdminClient()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
     if (!body.dataset_id) {
@@ -27,7 +33,8 @@ export async function POST(request: Request) {
             name: body.name,
             description: body.description,
             is_baseline: false,
-            dataset_id: body.dataset_id
+            dataset_id: body.dataset_id,
+            user_id: user.id
         }])
         .select()
         .single()

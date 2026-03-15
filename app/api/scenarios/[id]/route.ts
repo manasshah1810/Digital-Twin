@@ -1,11 +1,13 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const supabase = createAdminClient()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: scenario, error: scenarioError } = await supabase
         .from('scenarios')
@@ -47,11 +49,13 @@ export async function PATCH(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const supabase = createAdminClient()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: currentScenario, error: fetchError } = await supabase
         .from('scenarios')
-        .select('is_baseline')
+        .select('is_baseline, user_id')
         .eq('id', params.id)
         .maybeSingle()
 
@@ -86,7 +90,9 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const supabase = createAdminClient()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: currentScenario, error: fetchError } = await supabase
         .from('scenarios')
