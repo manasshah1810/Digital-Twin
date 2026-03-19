@@ -16,6 +16,27 @@
       "static/chunks/main-app.js",
       "static/css/app/dashboard/page.css",
       "static/chunks/app/dashboard/page.js"
+    ],
+    "/dashboard/datasets/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/datasets/page.js"
+    ],
+    "/ai-advisor/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/ai-advisor/page.css",
+      "static/chunks/app/ai-advisor/page.js"
+    ],
+    "/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/login/page.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

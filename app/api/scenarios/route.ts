@@ -3,7 +3,11 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    let { data: { user } } = await supabase.auth.getUser()
+
+    if (!user && process.env.NODE_ENV === 'development') {
+        user = { id: '00000000-0000-0000-0000-000000000000', email: 'dev@local.twin' } as any
+    }
 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -18,7 +22,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    let { data: { user } } = await supabase.auth.getUser()
+
+    if (!user && process.env.NODE_ENV === 'development') {
+        user = { id: '00000000-0000-0000-0000-000000000000', email: 'dev@local.twin' } as any
+    }
 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import ThemeProvider, { ThemeToggle } from './components/ThemeProvider';
+import { createClient } from '@/lib/supabase/server';
+import UserMenu from './components/UserMenu';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -11,11 +13,14 @@ export const metadata: Metadata = {
     description: 'Advanced deterministic simulation for resilient logistics and supply chain optimization.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
     return (
         <html lang="en">
             <body className={cn(inter.className, "antialiased selection:bg-brand-500/10 text-surface-900 bg-surface-50")}>
@@ -41,9 +46,7 @@ export default function RootLayout({
                                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                                         System Active
                                     </div>
-                                    <a href="/dashboard" className="rounded-lg bg-brand-500 text-white px-5 py-2 text-[11px] font-bold uppercase tracking-wider transition-all hover:bg-black active:scale-95 shadow-md shadow-brand-500/20">
-                                        Launch Console
-                                    </a>
+                                    <UserMenu user={user} />
                                 </div>
                             </div>
                         </header>

@@ -4,7 +4,13 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    let { data: { user } } = await supabase.auth.getUser()
+
+    // Development bypass to allow local testing without session
+    if (!user && process.env.NODE_ENV === 'development') {
+        console.log('[API] Dev Bypass: Using mock user for /api/datasets')
+        user = { id: '00000000-0000-0000-0000-000000000000', email: 'dev@local.twin' } as any
+    }
 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -24,7 +30,11 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: 'Asset ID is required' }, { status: 400 })
 
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    let { data: { user } } = await supabase.auth.getUser()
+
+    if (!user && process.env.NODE_ENV === 'development') {
+        user = { id: '00000000-0000-0000-0000-000000000000', email: 'dev@local.twin' } as any
+    }
 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
